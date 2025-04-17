@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { ShortQuestionnaire } from '../Workers/ShortQuestionnaire';
 
 interface Site {
   id: string;
@@ -31,6 +32,8 @@ export function SiteCheckIn() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showHealthCheck, setShowHealthCheck] = useState(false);
+  const [healthCheckCompleted, setHealthCheckCompleted] = useState(false);
 
   useEffect(() => {
     if (siteId) {
@@ -118,8 +121,19 @@ export function SiteCheckIn() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleHealthCheckClose = () => {
+    setShowHealthCheck(false);
+  };
+
+  const handleHealthCheckComplete = () => {
+    setHealthCheckCompleted(true);
+    setShowHealthCheck(false);
+    // Automatically submit the form after health check is completed
+    handleFormSubmit();
+  };
+
+  // Separate function to handle the actual form submission
+  const handleFormSubmit = async () => {
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -130,13 +144,14 @@ export function SiteCheckIn() {
       
       if (isCheckingIn) {
         // Check in - use RPC function to bypass RLS
-        const { error } = await supabase.rpc('create_site_log', {
+        const { error } = await supabase.rpc('create_site_log_with_health_check', {
           p_site_id: siteId,
           p_full_name: formData.full_name,
           p_phone: formData.phone,
           p_company: formData.company,
           p_email: formData.email,
-          p_fit_to_work: formData.fit_to_work
+          p_fit_to_work: formData.fit_to_work,
+          p_health_check_completed: healthCheckCompleted
         });
 
         if (error) {
@@ -154,7 +169,8 @@ export function SiteCheckIn() {
                 fit_to_work: formData.fit_to_work,
                 logged_in_at: new Date().toISOString(),
                 // If user is logged in, associate with their user ID
-                ...(session?.user?.id ? { user_id: session.user.id } : {})
+                ...(session?.user?.id ? { user_id: session.user.id } : {}),
+                health_check_completed: healthCheckCompleted
               }
             ]);
 
@@ -186,6 +202,7 @@ export function SiteCheckIn() {
         setSuccess(`Successfully checked out from ${site?.name}`);
         setExistingLog(null);
         setIsCheckingIn(true);
+        setHealthCheckCompleted(false);
       }
     } catch (error: any) {
       console.error('Error during check-in/out:', error);
@@ -193,6 +210,18 @@ export function SiteCheckIn() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // If checking in and health check not completed, show health check modal
+    if (isCheckingIn && !healthCheckCompleted) {
+      setShowHealthCheck(true);
+      return;
+    }
+    
+    handleFormSubmit();
   };
 
   if (loading) {
@@ -221,8 +250,16 @@ export function SiteCheckIn() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+      {/* Health Check Modal */}
+      <ShortQuestionnaire 
+        isOpen={showHealthCheck}
+        onClose={handleHealthCheckClose}
+        userEmail={formData.email}
+        onScanQRCode={handleHealthCheckComplete}
+      />
+      
+      <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
         <div className="mb-6">
           <button
             onClick={() => navigate('/')}
