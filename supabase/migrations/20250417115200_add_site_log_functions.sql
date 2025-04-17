@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION create_site_log_with_health_check(
   p_company TEXT,
   p_email TEXT,
   p_fit_to_work BOOLEAN,
-  p_health_check_completed BOOLEAN
+  p_health_check_completed BOOLEAN DEFAULT TRUE
 ) RETURNS VOID AS $$
 BEGIN
   INSERT INTO site_logs (

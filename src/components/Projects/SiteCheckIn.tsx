@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ShortQuestionnaire } from '../Workers/ShortQuestionnaire';
+import { SiteHealthCheck } from '../Workers/SiteHealthCheck';
 
 interface Site {
   id: string;
@@ -252,11 +252,11 @@ export function SiteCheckIn() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       {/* Health Check Modal */}
-      <ShortQuestionnaire 
+      <SiteHealthCheck 
         isOpen={showHealthCheck}
         onClose={handleHealthCheckClose}
         userEmail={formData.email}
-        onScanQRCode={handleHealthCheckComplete}
+        onComplete={handleHealthCheckComplete}
       />
       
       <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">

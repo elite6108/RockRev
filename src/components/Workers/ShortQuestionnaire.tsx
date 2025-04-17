@@ -8,6 +8,7 @@ interface ShortQuestionnaireProps {
   onClose: () => void;
   userEmail?: string;
   onScanQRCode?: () => void;
+  skipWorkerCheck?: boolean; // Skip worker check for site check-in
 }
 
 export function ShortQuestionnaire({
@@ -15,6 +16,7 @@ export function ShortQuestionnaire({
   onClose,
   userEmail,
   onScanQRCode,
+  skipWorkerCheck = false,
 }: ShortQuestionnaireProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -307,6 +309,22 @@ export function ShortQuestionnaire({
     }
 
     try {
+      // For site check-in mode, skip worker validation
+      if (skipWorkerCheck) {
+        console.log('Site check-in mode: skipping worker validation');
+        // Just mark as success and call the callback
+        setSuccess(true);
+        
+        if (onScanQRCode) {
+          // If in site check-in mode and we have a callback, call it
+          setTimeout(() => {
+            onScanQRCode();
+          }, 500);
+        }
+        return;
+      }
+      
+      // Regular worker flow
       if (userEmail) {
         // First get the worker's ID
         const { data: workerData, error: workerError } = await supabase
@@ -366,14 +384,21 @@ export function ShortQuestionnaire({
           return;
         }
       }
+  } finally {
+    setLoading(false);
+  }
 
-      setSuccess(true);
-      setShowQRScanner(true);
-    } catch (err) {
-      console.error('Error in health check:', err);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+  // Always mark as successful
+  setSuccess(true);
+  
+  // Only show QR scanner if not in site check-in mode
+  if (!skipWorkerCheck) {
+    setShowQRScanner(true);
+  } else if (onScanQRCode) {
+    // If in site check-in mode and we have a callback, call it
+    onScanQRCode();
+  }
+};
     }
   };
 
