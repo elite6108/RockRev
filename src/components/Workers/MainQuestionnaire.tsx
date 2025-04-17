@@ -3,9 +3,8 @@ import { supabase } from '../../lib/supabase';
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
-  ClipboardCheck,
   Save,
+  ClipboardCheck,
   X,
 } from 'lucide-react';
 
@@ -198,7 +197,9 @@ export function MainQuestionnaire({
     }));
   };
 
-  const nextStep = () => {
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+
     if (currentStep === 'medicalDeclaration') {
       setCurrentStep('occupationalHistory');
     } else if (currentStep === 'occupationalHistory') {
@@ -206,7 +207,9 @@ export function MainQuestionnaire({
     }
   };
 
-  const prevStep = () => {
+  const handlePrevious = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+
     if (currentStep === 'occupationalHistory') {
       setCurrentStep('medicalDeclaration');
     } else if (currentStep === 'declaration') {
@@ -293,17 +296,52 @@ export function MainQuestionnaire({
 
       if (supabaseError) throw supabaseError;
 
-      // Directly update the worker table as well (this is a backup in case the trigger fails)
+      // Use our new function to update the worker health check status
       if (userEmail) {
-        console.log('Directly updating worker table for email:', userEmail);
-        const { error: workerUpdateError } = await supabase
-          .from('workers')
-          .update({ last_health_questionnaire: currentDate })
-          .eq('email', userEmail);
-
-        if (workerUpdateError) {
-          console.error('Error updating worker table:', workerUpdateError);
-          // Continue anyway since the trigger should still work
+        console.log('Updating worker health check for email:', userEmail);
+        try {
+          // Try using our new RPC function first
+          const { data: updateResult, error: rpcError } = await supabase.rpc('update_worker_health_check', {
+            p_email: userEmail,
+            p_questionnaire_id: null
+          });
+          
+          if (rpcError) {
+            console.error('Error using RPC function:', rpcError);
+            
+            // Fallback: Try direct update if the worker record exists
+            const { error: updateError } = await supabase
+              .from('workers')
+              .update({
+                last_short_questionnaire_date: currentDate,
+                last_health_questionnaire: currentDate
+              })
+              .eq('email', userEmail);
+            
+            if (updateError) {
+              console.error('Error updating worker record:', updateError);
+              
+              // Last resort: Try to insert a new worker record
+              const { error: insertError } = await supabase
+                .from('workers')
+                .insert([
+                  {
+                    email: userEmail,
+                    last_short_questionnaire_date: currentDate,
+                    last_health_questionnaire: currentDate
+                  }
+                ]);
+              
+              if (insertError) {
+                console.error('Error inserting worker record:', insertError);
+              }
+            }
+          } else {
+            console.log('Worker health check update result:', updateResult);
+          }
+        } catch (err) {
+          console.error('Error in health questionnaire update:', err);
+          // Continue anyway since we've already saved the questionnaire data
         }
       }
 
