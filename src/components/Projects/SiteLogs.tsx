@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft } from 'lucide-react';
 
 interface SiteLogsProps {
   siteId: string;
@@ -100,16 +99,26 @@ export function SiteLogs({ siteId, onBack }: SiteLogsProps) {
         <div className="px-4 py-6 sm:px-0">
           <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-white mb-6">
-              <button
-                onClick={onBack}
-                className="flex items-center text-gray-600 hover:text-gray-900 dark:text-white dark:hover:text-gray-200"
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-white">
+                <button
+                  onClick={onBack}
+                  className="flex items-center text-gray-600 hover:text-gray-900 dark:text-white dark:hover:text-gray-200"
+                >
+                  ← 
+                  Back to Sites
+                </button>
+                <span>/</span>
+                <span className="text-gray-900 dark:text-white font-medium">{site.name} Logs</span>
+              </div>
+              <a 
+                href={`/site-checkin/${site.id}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Sites
-              </button>
-              <span>/</span>
-              <span className="text-gray-900 dark:text-white font-medium">{site.name} Logs</span>
+                Check In to Site
+              </a>
             </div>
 
             {/* Site Info Cards */}

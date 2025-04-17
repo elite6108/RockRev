@@ -7,6 +7,7 @@ import { WorkerDashboard } from './components/WorkerDashboard';
 import { AuthForm } from './components/AuthForm';
 import { ForgotPassword } from './components/ForgotPassword';
 import { ResetPassword } from './components/ResetPassword';
+import { SiteCheckIn } from './components/Projects/SiteCheckIn';
 import { supabase } from './lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -207,6 +208,10 @@ function App() {
         <Navigate to="/login" state={{ from: location }} replace />
       )
     })) || []),
+    {
+      path: '/site-checkin/:siteId',
+      element: <SiteCheckIn />
+    },
     {
       path: '/login',
       element: !user ? (

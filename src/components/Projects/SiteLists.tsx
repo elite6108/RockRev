@@ -330,11 +330,10 @@ export function SiteLists({ onBack }: SiteListsProps) {
       ctx.fillText(`${site.county}, ${site.postcode}`, canvas.width / 2, 270);
       
       // Create QR code data URL
-      // QR code will contain a URL to the site with format: site-id={site.id}
-      // Update to create a proper deep link URL that can be handled by the other app
-      const appURL = `sitelog://login?site_id=${site.id}`;
-      // Alternatively, a web URL format could be used if the app supports web URLs
-      // const appURL = `https://yourapp.com/login?site_id=${site.id}`;
+      // QR code will contain a URL to the site check-in page
+      // We're using window.location.origin to get the base URL of the current app
+      const baseUrl = window.location.origin;
+      const appURL = `${baseUrl}/site-checkin/${site.id}`;
       
       const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appURL)}`;
       
