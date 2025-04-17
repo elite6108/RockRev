@@ -125,32 +125,64 @@ export function SiteCheckIn() {
     setSuccess(null);
     
     try {
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (isCheckingIn) {
-        // Check in
-        const { error } = await supabase
-          .from('site_logs')
-          .insert([
-            {
-              site_id: siteId,
-              full_name: formData.full_name,
-              phone: formData.phone,
-              company: formData.company,
-              email: formData.email,
-              fit_to_work: formData.fit_to_work,
-              logged_in_at: new Date().toISOString()
-            }
-          ]);
+        // Check in - use RPC function to bypass RLS
+        const { error } = await supabase.rpc('create_site_log', {
+          p_site_id: siteId,
+          p_full_name: formData.full_name,
+          p_phone: formData.phone,
+          p_company: formData.company,
+          p_email: formData.email,
+          p_fit_to_work: formData.fit_to_work
+        });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating site log:', error);
+          // Fallback to direct insert if RPC fails (might still fail due to RLS)
+          const { error: insertError } = await supabase
+            .from('site_logs')
+            .insert([
+              {
+                site_id: siteId,
+                full_name: formData.full_name,
+                phone: formData.phone,
+                company: formData.company,
+                email: formData.email,
+                fit_to_work: formData.fit_to_work,
+                logged_in_at: new Date().toISOString(),
+                // If user is logged in, associate with their user ID
+                ...(session?.user?.id ? { user_id: session.user.id } : {})
+              }
+            ]);
+
+          if (insertError) throw insertError;
+        }
+        
         setSuccess(`Successfully checked in to ${site?.name}`);
       } else {
-        // Check out
-        const { error } = await supabase
-          .from('site_logs')
-          .update({ logged_out_at: new Date().toISOString() })
-          .eq('id', existingLog.id);
+        // Check out - use RPC function to bypass RLS
+        const { error } = await supabase.rpc('update_site_log_checkout', {
+          p_log_id: existingLog.id
+        });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating site log:', error);
+          // Fallback to direct update if RPC fails
+          const { error: updateError } = await supabase
+            .from('site_logs')
+            .update({ 
+              logged_out_at: new Date().toISOString(),
+              // If user is logged in, associate with their user ID
+              ...(session?.user?.id ? { user_id: session.user.id } : {})
+            })
+            .eq('id', existingLog.id);
+
+          if (updateError) throw updateError;
+        }
+        
         setSuccess(`Successfully checked out from ${site?.name}`);
         setExistingLog(null);
         setIsCheckingIn(true);
