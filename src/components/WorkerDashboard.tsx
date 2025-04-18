@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOutIcon, HardHatIcon, AlertTriangle, FileText, UserIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { WorkerProfile } from './Workers/WorkerProfile';
 import { MainQuestionnaire } from './Workers/MainQuestionnaire';
-import { ShortQuestionnaire } from './Workers/ShortQuestionnaire';
+// Import ShortQuestionnaire directly with a relative path
+import { ShortQuestionnaire } from './Workers/ShortQuestionnaire.tsx';
 
 interface WorkerDashboardProps {
-  selectedProjectId: string | null;
+  // Leave this prop for future use if needed
+  selectedProjectId?: string | null;
 }
 
-export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
+export function WorkerDashboard({}: WorkerDashboardProps) {
   const [user, setUser] = useState<any>(null); // For storing user data
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [siteCheckIns, setSiteCheckIns] = useState<any[]>([]);
+  // Keeping the state for future use but removing the warning
+  const [, setSiteCheckIns] = useState<any[]>([]);
   const [dataError, setDataError] = useState<string | null>(null);
 
   // Modal states
@@ -95,7 +97,7 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
 
       // If still no full name, use email
       if (!userData.full_name) {
-        userData.full_name = user.email;
+        userData.full_name = user.email || 'Unknown User';
       }
 
       // Fetch user details from users table
@@ -118,15 +120,17 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
       }
 
       console.log(
-        'Final user data with last_health_questionnaire:',
-        userData.last_health_questionnaire
+        'Final user data:',
+        userData
       );
 
       // Update the user state with all the data
       setUser(userData);
 
       // After user is loaded, fetch site check-ins
-      fetchSiteCheckIns(user.email);
+      if (user.email) {
+        fetchSiteCheckIns(user.email);
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setDataError('Failed to load user data. Please try again.');
@@ -346,7 +350,13 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <HardHatIcon className="h-8 w-8 text-amber-500" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-amber-500">
+                  <path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-3H2v3z"/>
+                  <path d="M10 4v8h4V4h5a1 1 0 0 1 1 1v8H4V5a1 1 0 0 1 1-1h5z"/>
+                  <path d="M8 18v-2"/>
+                  <path d="M12 18v-2"/>
+                  <path d="M16 18v-2"/>
+                </svg>
                 <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
                   Worker Portal
                 </span>
@@ -359,9 +369,21 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                 className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
               >
                 {isDarkMode ? (
-                  <SunIcon className="h-5 w-5" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2"/>
+                    <path d="M12 20v2"/>
+                    <path d="m4.93 4.93 1.41 1.41"/>
+                    <path d="m17.66 17.66 1.41 1.41"/>
+                    <path d="M2 12h2"/>
+                    <path d="M20 12h2"/>
+                    <path d="m6.34 17.66-1.41 1.41"/>
+                    <path d="m19.07 4.93-1.41 1.41"/>
+                  </svg>
                 ) : (
-                  <MoonIcon className="h-5 w-5" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                  </svg>
                 )}
               </button>
               <div className="ml-3 relative">
@@ -373,7 +395,10 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                     <span className="mr-2">
                       {user?.full_name || user?.email}
                     </span>
-                    <UserIcon className="h-8 w-8" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
                   </button>
                 </div>
                 {isMenuOpen && (
@@ -382,14 +407,21 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                       onClick={handleMyProfile}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     >
-                      <UserIcon className="h-4 w-4 mr-2" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
                       My Profile
                     </button>
                     <button
                       onClick={handleSignOut}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     >
-                      <LogOutIcon className="h-4 w-4 mr-2" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" x2="9" y1="12" y2="12"/>
+                      </svg>
                       Sign out
                     </button>
                   </div>
@@ -455,13 +487,26 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
               hasValidHealthQuestionnaire() ? handleScanQRCode : undefined
             }
           >
-            <AlertTriangle
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="48" 
+              height="48" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
               className={`h-12 w-12 mb-4 ${
                 !hasValidHealthQuestionnaire()
                   ? 'text-gray-400 dark:text-gray-500'
                   : 'text-amber-500'
               }`}
-            />
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+              <path d="M12 9v4"/>
+              <path d="M12 17h.01"/>
+            </svg>
             <h3
               className={`text-lg font-medium mb-2 ${
                 !hasValidHealthQuestionnaire()
@@ -497,13 +542,28 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                 : undefined
             }
           >
-            <FileText
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="48" 
+              height="48" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
               className={`h-12 w-12 mb-4 ${
                 !isHealthQuestionnaireNeeded()
                   ? 'text-gray-400 dark:text-gray-500'
                   : 'text-amber-500'
               }`}
-            />
+            >
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <line x1="10" y1="9" x2="8" y2="9"/>
+            </svg>
             <h3
               className={`text-lg font-medium mb-2 ${
                 !isHealthQuestionnaireNeeded()
@@ -531,7 +591,21 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
             className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
             onClick={handleMyProfile}
           >
-            <User className="h-12 w-12 text-amber-500 mb-4" />
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="48" 
+              height="48" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="h-12 w-12 text-amber-500 mb-4"
+            >
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               My Profile
             </h3>
