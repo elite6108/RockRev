@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
-  ArrowLeft,
-  ArrowRight,
   Save,
-  ClipboardCheck,
   X,
 } from 'lucide-react';
 
@@ -124,7 +121,7 @@ export function MainQuestionnaire({
     }
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: any) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -137,7 +134,7 @@ export function MainQuestionnaire({
     setLastY(y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: any) => {
     if (!isDrawing) return;
 
     const canvas = canvasRef.current;
@@ -197,25 +194,7 @@ export function MainQuestionnaire({
     }));
   };
 
-  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-
-    if (currentStep === 'medicalDeclaration') {
-      setCurrentStep('occupationalHistory');
-    } else if (currentStep === 'occupationalHistory') {
-      setCurrentStep('declaration');
-    }
-  };
-
-  const handlePrevious = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-
-    if (currentStep === 'occupationalHistory') {
-      setCurrentStep('medicalDeclaration');
-    } else if (currentStep === 'declaration') {
-      setCurrentStep('occupationalHistory');
-    }
-  };
+  // Navigation functions have been replaced by inline handlers in the JSX
 
   const validateCurrentStep = (): string | null => {
     if (currentStep === 'declaration') {
@@ -1461,7 +1440,6 @@ export function MainQuestionnaire({
         <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
           <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 px-4 py-3 shrink-0">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-              <ClipboardCheck className="h-5 w-5 mr-2" />
               6-Month Health Questionnaire
             </h3>
             <button
@@ -1535,10 +1513,16 @@ export function MainQuestionnaire({
               {currentStep !== 'medicalDeclaration' && (
                 <button
                   type="button"
-                  onClick={prevStep}
+                  onClick={(e: any) => {
+                    e.preventDefault();
+                    if (currentStep === 'occupationalHistory') {
+                      setCurrentStep('medicalDeclaration');
+                    } else if (currentStep === 'declaration') {
+                      setCurrentStep('occupationalHistory');
+                    }
+                  }}
                   className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-100"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
                   Previous
                 </button>
               )}
@@ -1548,11 +1532,17 @@ export function MainQuestionnaire({
               {currentStep !== 'declaration' ? (
                 <button
                   type="button"
-                  onClick={nextStep}
+                  onClick={(e: any) => {
+                    e.preventDefault();
+                    if (currentStep === 'medicalDeclaration') {
+                      setCurrentStep('occupationalHistory');
+                    } else if (currentStep === 'occupationalHistory') {
+                      setCurrentStep('declaration');
+                    }
+                  }}
                   className="flex items-center bg-indigo-600 px-4 py-2 text-sm font-medium text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Next
-                  <ArrowRight className="h-4 w-4 ml-1" />
                 </button>
               ) : (
                 <button
