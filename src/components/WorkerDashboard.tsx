@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { WorkerProfile } from './Workers/WorkerProfile';
 import { MainQuestionnaire } from './Workers/MainQuestionnaire';
 // Import ShortQuestionnaire directly with a relative path
-import { ShortQuestionnaire } from './Workers/ShortQuestionnaire.tsx';
+import { ShortQuestionnaire } from './Workers/ShortQuestionnaire';
+import { QRScannerModal } from './Workers/QRScannerModal.tsx';
 
 interface WorkerDashboardProps {
   // Leave this prop for future use if needed
@@ -26,6 +27,9 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
     useState(false);
   const [showShortQuestionnaireModal, setShowShortQuestionnaireModal] =
     useState(false);
+  const [showQRScannerModal, setShowQRScannerModal] = useState(false);
+  const [scannedSiteId, setScannedSiteId] = useState<string | null>(null);
+  const [scannedSiteName, setScannedSiteName] = useState<string>('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -263,6 +267,74 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
   const handleScanQRCode = () => {
     setShowShortQuestionnaireModal(true);
     setIsMenuOpen(false);
+  };
+
+  const handleCompletedHealthCheck = () => {
+    // After health check is completed, show QR scanner
+    setShowShortQuestionnaireModal(false);
+    setShowQRScannerModal(true);
+  };
+
+  const handleQRCodeScanned = async (decodedText: string) => {
+    console.log('QR Code scanned:', decodedText);
+    try {
+      // Check if the decoded text is a valid site ID in the format 'site:12345'
+      const siteMatch = decodedText.match(/^site:(\d+)$/);
+      if (siteMatch && siteMatch[1]) {
+        const siteId = siteMatch[1];
+        setScannedSiteId(siteId);
+
+        // Fetch site details
+        const { data: siteData, error: siteError } = await supabase
+          .from('sites')
+          .select('name')
+          .eq('id', siteId)
+          .single();
+
+        if (siteError) {
+          console.error('Error fetching site details:', siteError);
+          alert('Could not verify site. Please try again.');
+          return;
+        }
+
+        if (siteData) {
+          setScannedSiteName(siteData.name);
+          
+          // Record the check-in
+          if (user?.email) {
+            const { error: checkInError } = await supabase
+              .from('site_check_ins')
+              .insert([
+                {
+                  email: user.email,
+                  site_id: siteId,
+                  check_in_time: new Date().toISOString(),
+                }
+              ]);
+
+            if (checkInError) {
+              console.error('Error recording check-in:', checkInError);
+              alert('Failed to record check-in. Please try again.');
+              return;
+            }
+            
+            // Successfully checked in
+            if (user?.email) {
+              await fetchSiteCheckIns(user.email);
+            }
+            alert(`Successfully checked in at ${siteData.name}`);
+            setShowQRScannerModal(false);
+          }
+        } else {
+          alert('Site not found. Please try scanning a valid QR code.');
+        }
+      } else {
+        alert('Invalid QR code format. Please scan a valid site QR code.');
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      alert('Failed to process QR code. Please try again.');
+    }
   };
 
   const handleHealthQuestionnaire = () => {
@@ -651,7 +723,15 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
         isOpen={showShortQuestionnaireModal}
         onClose={() => setShowShortQuestionnaireModal(false)}
         userEmail={user?.email}
-        onScanQRCode={() => (window.location.href = '/check-in')}
+        onScanQRCode={handleCompletedHealthCheck}
+      />
+
+      <QRScannerModal
+        isOpen={showQRScannerModal}
+        onClose={() => setShowQRScannerModal(false)}
+        onCodeScanned={handleQRCodeScanned}
+        scannedSiteId={scannedSiteId}
+        scannedSiteName={scannedSiteName}
       />
     </div>
   );
