@@ -234,7 +234,25 @@ export function MainQuestionnaire({
       }
 
       const currentDate = new Date().toISOString();
-      console.log('Submitting health questionnaire with date:', currentDate);
+      console.log('DEBUG: Submitting health questionnaire with date:', currentDate);
+
+      // Debug: Check if tables exist
+      console.log('DEBUG: Checking database tables...');
+      try {
+        const { data: tables, error: tablesError } = await supabase
+          .rpc('list_tables');
+
+        if (tablesError) {
+          console.error('DEBUG: Error listing tables:', tablesError);
+        } else {
+          console.log('DEBUG: Available tables:', tables);
+        }
+      } catch (tableErr) {
+        console.error('DEBUG: Error checking tables:', tableErr);
+      }
+
+      // Debug: Log the operation we're about to perform
+      console.log('DEBUG: Attempting to insert into health_questionnaires table');
 
       // Insert the health questionnaire
       const { error: supabaseError } = await supabase
@@ -273,24 +291,45 @@ export function MainQuestionnaire({
           confirmation_checked: formData.confirmationChecked,
         });
 
-      if (supabaseError) throw supabaseError;
+      if (supabaseError) {
+        console.error('DEBUG: Error inserting health questionnaire:', supabaseError);
+        throw supabaseError;
+      }
 
-      // Directly update the workers table with the health check date
+      // Update worker record with the health check date
       if (userEmail) {
-        console.log('Recording health check for email:', userEmail);
+        console.log('DEBUG: Recording health check for email:', userEmail);
         try {
-          // First, try to update the worker record if it exists
+          // First, check if the workers table exists and has the right structure
+          console.log('DEBUG: Checking workers table structure');
+
+          try {
+            const { data: columns, error: columnsError } = await supabase
+              .rpc('list_table_columns', { table_name: 'workers' });
+
+            if (columnsError) {
+              console.error('DEBUG: Error checking columns:', columnsError);
+            } else {
+              console.log('DEBUG: Workers table columns:', columns);
+            }
+          } catch (columnErr) {
+            console.error('DEBUG: Error when checking columns:', columnErr);
+          }
+
+          // Check if worker exists
           const { data: existingWorker, error: checkError } = await supabase
             .from('workers')
             .select('id')
             .eq('email', userEmail)
             .maybeSingle();
-          
+
           if (checkError) {
-            console.error('Error checking for existing worker:', checkError);
+            console.error('DEBUG: Error checking for existing worker:', checkError);
+            throw checkError;
           }
-          
+
           if (existingWorker) {
+            console.log('DEBUG: Found existing worker record, updating...');
             // Update existing worker record
             const { error: updateError } = await supabase
               .from('workers')
@@ -298,13 +337,16 @@ export function MainQuestionnaire({
                 last_health_questionnaire: currentDate
               })
               .eq('email', userEmail);
-              
+
             if (updateError) {
-              console.error('Error updating worker record:', updateError);
+              console.error('DEBUG: Error updating worker record:', updateError);
+              console.error('DEBUG: Error details:', JSON.stringify(updateError));
+              throw updateError;
             } else {
-              console.log('Worker record updated successfully');
+              console.log('DEBUG: Worker record updated successfully');
             }
           } else {
+            console.log('DEBUG: Worker record not found, creating new one...');
             // Insert new worker record
             const { error: insertError } = await supabase
               .from('workers')
@@ -314,15 +356,18 @@ export function MainQuestionnaire({
                   last_health_questionnaire: currentDate
                 }
               ]);
-              
+
             if (insertError) {
-              console.error('Error inserting worker record:', insertError);
+              console.error('DEBUG: Error inserting worker record:', insertError);
+              console.error('DEBUG: Error details:', JSON.stringify(insertError));
+              throw insertError;
             } else {
-              console.log('New worker record created successfully');
+              console.log('DEBUG: New worker record created successfully');
             }
           }
-          
+
           // Also insert into health_checks table for record-keeping
+          console.log('DEBUG: Inserting into health_checks table');
           const { error: healthCheckError } = await supabase
             .from('health_checks')
             .insert([
@@ -330,20 +375,22 @@ export function MainQuestionnaire({
                 email: userEmail,
                 completed_at: currentDate,
                 fit_to_work: true,
-                taking_medications: false,
+                taking_medications: formData.prescribedMedications.length > 0,
                 wearing_correct_ppe: true
               }
             ]);
-            
+
           if (healthCheckError) {
-            console.error('Error recording health check:', healthCheckError);
+            console.error('DEBUG: Error recording health check:', healthCheckError);
+            console.error('DEBUG: Error details:', JSON.stringify(healthCheckError));
           } else {
-            console.log('Health check recorded successfully');
+            console.log('DEBUG: Health check recorded successfully');
           }
         } catch (err) {
-          console.error('Error in health questionnaire update:', err);
-          console.log('Continuing anyway - health check will be considered completed');
-          // Continue anyway since we've already saved the questionnaire data
+          console.error('DEBUG: Error in health questionnaire update:', err);
+          console.error('DEBUG: Full error object:', JSON.stringify(err));
+          setError(`Error updating worker record: ${err instanceof Error ? err.message : String(err)}`);
+          // We'll continue but show the error to the user
         }
       }
 
@@ -351,7 +398,7 @@ export function MainQuestionnaire({
 
       // Call onSuccess to update parent component IMMEDIATELY
       if (onSuccess) {
-        console.log('Calling onSuccess to update parent component');
+        console.log('DEBUG: Calling onSuccess to update parent component');
         onSuccess();
       }
 
