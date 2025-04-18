@@ -27,39 +27,32 @@ export function ShortQuestionnaire({
     setLoading(true);
     
     try {
-      // Use our new record_health_check function to record the health check
+      // Simplified approach - just record in health_checks table
       if (userEmail) {
         console.log('Health check completed for user:', userEmail);
         
         try {
-          // Try to use our new RPC function to record the health check
-          const { error } = await supabase.rpc('record_health_check', {
-            p_email: userEmail
-          });
-          
+          // Insert directly into health_checks table
+          const { error } = await supabase
+            .from('health_checks')
+            .insert([
+              {
+                email: userEmail,
+                completed_at: new Date().toISOString(),
+                fit_to_work: true
+              }
+            ]);
+            
           if (error) {
             console.error('Error recording health check:', error);
-            
-            // Fallback: Try to insert directly into health_checks table
-            const { error: insertError } = await supabase
-              .from('health_checks')
-              .insert([
-                {
-                  email: userEmail,
-                  completed_at: new Date().toISOString(),
-                  fit_to_work: true
-                }
-              ]);
-              
-            if (insertError) {
-              console.log('Could not record health check in database, continuing anyway');
-            }
+            console.log('Continuing anyway - health check will be considered completed');
           } else {
             console.log('Health check recorded successfully');
           }
         } catch (err) {
           // Silently fail - just log the error
           console.error('Error recording health check:', err);
+          console.log('Continuing anyway - health check will be considered completed');
         }
       }
       
