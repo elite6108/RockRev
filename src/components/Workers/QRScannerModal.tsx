@@ -161,11 +161,32 @@ export function QRScannerModal({
       // Detect QR code
       const code = window.jsQR?.(imageData.data, imageData.width, imageData.height);
       
-      if (code) {
+      if (code && code.data && code.data.trim() !== '') {
         console.log('QR code detected:', code.data);
-        stopCamera();
-        onCodeScanned(code.data);
-        return;
+        console.log('QR code raw data type:', typeof code.data);
+        console.log('First 50 characters:', code.data.substring(0, 50));
+        
+        // Only process QR codes with actual content
+        if (code.data.trim().length > 0) {
+          try {
+            // Debug: Try to parse as URL to see if it's valid
+            const testUrl = new URL(code.data);
+            console.log('Successfully parsed as URL', {
+              protocol: testUrl.protocol,
+              host: testUrl.host,
+              pathname: testUrl.pathname,
+              search: testUrl.search
+            });
+          } catch (error) {
+            console.error('Not a valid URL format:', error);
+          }
+          
+          stopCamera();
+          onCodeScanned(code.data);
+          return;
+        } else {
+          console.log('Ignoring empty QR code data');
+        }
       }
       
       // Continue scanning if no QR code detected

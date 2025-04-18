@@ -277,11 +277,62 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
 
   const handleQRCodeScanned = async (decodedText: string) => {
     console.log('QR Code scanned:', decodedText);
+    
+    // Guard against empty QR codes
+    if (!decodedText || decodedText.trim() === '') {
+      alert('Empty or invalid QR code detected. Please try scanning again.');
+      return;
+    }
+    
     try {
-      // Check if the decoded text is a valid site ID in the format 'site:12345'
+      // Extract the site ID from the QR code
+      let siteId = null;
+      
+      // Method 1: Check if it's in the old format 'site:12345'
       const siteMatch = decodedText.match(/^site:(\d+)$/);
       if (siteMatch && siteMatch[1]) {
-        const siteId = siteMatch[1];
+        siteId = siteMatch[1];
+      }
+      
+      // Method 2: Try to extract from URL with pathname /site-checkin/{uuid}
+      if (!siteId) {
+        try {
+          const url = new URL(decodedText);
+          
+          // First check pathname for /site-checkin/{uuid}
+          if (url.pathname.includes('/site-checkin/')) {
+            const pathParts = url.pathname.split('/');
+            // Get the last path segment which should be the UUID
+            const lastSegment = pathParts[pathParts.length - 1];
+            
+            // Verify it looks like a UUID
+            if (lastSegment.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)) {
+              siteId = lastSegment;
+              console.log('Found site ID in URL pathname:', siteId);
+            }
+          }
+          
+          // Also check query parameters
+          if (!siteId && url.searchParams.has('siteId')) {
+            siteId = url.searchParams.get('siteId');
+            console.log('Found site ID in URL query parameter:', siteId);
+          }
+        } catch (error) {
+          console.log('Not a URL format, error:', error);
+        }
+      }
+      
+      // Method 3: Try to extract UUID directly from string
+      if (!siteId) {
+        const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+        const match = decodedText.match(uuidPattern);
+        if (match) {
+          siteId = match[0];
+        }
+      }
+      
+      if (siteId) {
+        console.log('Extracted site ID:', siteId);
         setScannedSiteId(siteId);
 
         // Fetch site details
@@ -302,34 +353,81 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
           
           // Record the check-in
           if (user?.email) {
-            const { error: checkInError } = await supabase
-              .from('site_check_ins')
-              .insert([
-                {
-                  email: user.email,
-                  site_id: siteId,
-                  check_in_time: new Date().toISOString(),
-                }
-              ]);
+            // Insert into the correct site_logs table with the required fields
+            const { error: logError } = await supabase
+              .from('site_logs')
+              .insert([{
+                site_id: siteId,
+                full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
+                phone: user.user_metadata?.phone || '',
+                company: user.user_metadata?.company || '',
+                email: user.email,
+                fit_to_work: true, // Assuming the user is fit to work when checking in
+                logged_in_at: new Date().toISOString(),
+                // logged_out_at remains null until they check out
+              }]);
 
-            if (checkInError) {
-              console.error('Error recording check-in:', checkInError);
+            if (logError) {
+              console.error('Error recording site log:', logError);
               alert('Failed to record check-in. Please try again.');
               return;
             }
             
             // Successfully checked in
-            if (user?.email) {
-              await fetchSiteCheckIns(user.email);
-            }
             alert(`Successfully checked in at ${siteData.name}`);
+            
+            // Close the scanner modal
             setShowQRScannerModal(false);
           }
         } else {
           alert('Site not found. Please try scanning a valid QR code.');
         }
       } else {
-        alert('Invalid QR code format. Please scan a valid site QR code.');
+        // Before giving up, try one last thing - check if the raw QR code itself is a valid site ID
+        // This handles the case where the QR code might just be the UUID itself
+        const { data: rawSiteCheck, error: rawSiteError } = await supabase
+          .from('sites')
+          .select('name')
+          .eq('id', decodedText)
+          .maybeSingle();
+          
+        if (!rawSiteError && rawSiteCheck) {
+          setScannedSiteId(decodedText);
+          setScannedSiteName(rawSiteCheck.name);
+          
+          // Record the check-in
+          if (user?.email) {
+            // Insert into the correct site_logs table with the required fields
+            const { error: logError } = await supabase
+              .from('site_logs')
+              .insert([{
+                site_id: decodedText,
+                full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
+                phone: user.user_metadata?.phone || '',
+                company: user.user_metadata?.company || '',
+                email: user.email,
+                fit_to_work: true, // Assuming the user is fit to work when checking in
+                logged_in_at: new Date().toISOString(),
+                // logged_out_at remains null until they check out
+              }]);
+
+            if (logError) {
+              console.error('Error recording site log:', logError);
+              alert('Failed to record check-in. Please try again.');
+              return;
+            }
+            
+            // Successfully checked in
+            alert(`Successfully checked in at ${rawSiteCheck.name}`);
+            
+            // Close the scanner modal
+            setShowQRScannerModal(false);
+            return;
+          }
+        } else {
+          console.log('Raw QR code is not a valid site ID either');
+          alert('Invalid QR code format. Please scan a valid site QR code.');
+        }
       }
     } catch (error) {
       console.error('Error processing QR code:', error);
