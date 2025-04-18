@@ -1,82 +1,11 @@
 -- Fix for the "relation 'last_health_questionnaire' does not exist" error
--- This migration ensures the workers table exists with the correct structure
--- and creates the necessary RPC functions for debugging table structures
+-- This migration ensures the health_questionnaires table exists
 
--- Create functions to list tables and columns for debugging
-CREATE OR REPLACE FUNCTION list_tables()
-RETURNS TABLE (table_name text) 
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT tablename::text FROM pg_tables 
-  WHERE schemaname = 'public' 
-  ORDER BY tablename;
-$$;
+-- Create health_questionnaires table, which seems to be missing based on the error
+DROP TABLE IF EXISTS health_questionnaires;
 
-CREATE OR REPLACE FUNCTION list_table_columns(table_name text)
-RETURNS TABLE (column_name text, data_type text) 
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT column_name::text, data_type::text 
-  FROM information_schema.columns 
-  WHERE table_schema = 'public' 
-  AND table_name = $1
-  ORDER BY ordinal_position;
-$$;
-
--- Grant execute permissions on the debugging functions
-GRANT EXECUTE ON FUNCTION list_tables TO authenticated;
-GRANT EXECUTE ON FUNCTION list_tables TO anon;
-GRANT EXECUTE ON FUNCTION list_table_columns TO authenticated;
-GRANT EXECUTE ON FUNCTION list_table_columns TO anon;
-
--- Make sure workers table exists with the right structure
-DO $$
-BEGIN
-  -- Create workers table if it doesn't exist
-  IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'workers') THEN
-    CREATE TABLE workers (
-      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      email TEXT UNIQUE NOT NULL,
-      first_name TEXT,
-      last_name TEXT,
-      full_name TEXT,
-      company TEXT,
-      phone TEXT,
-      last_short_questionnaire_date TIMESTAMPTZ,
-      last_health_questionnaire TIMESTAMPTZ,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  ELSE
-    -- Make sure the last_health_questionnaire column exists
-    IF NOT EXISTS (
-      SELECT FROM information_schema.columns 
-      WHERE table_schema = 'public' 
-      AND table_name = 'workers' 
-      AND column_name = 'last_health_questionnaire'
-    ) THEN
-      ALTER TABLE workers ADD COLUMN last_health_questionnaire TIMESTAMPTZ;
-    END IF;
-  END IF;
-END
-$$;
-
--- Create health_checks table if it doesn't exist
-CREATE TABLE IF NOT EXISTS health_checks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email TEXT NOT NULL,
-  completed_at TIMESTAMPTZ DEFAULT NOW(),
-  fit_to_work BOOLEAN DEFAULT TRUE,
-  taking_medications BOOLEAN DEFAULT FALSE,
-  wearing_correct_ppe BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create health_questionnaires table if it doesn't exist
-CREATE TABLE IF NOT EXISTS health_questionnaires (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE health_questionnaires (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   user_email TEXT,
   submission_date TIMESTAMPTZ NOT NULL,
@@ -111,7 +40,42 @@ CREATE TABLE IF NOT EXISTS health_questionnaires (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create a trigger function to update the workers table when a health questionnaire is submitted
+-- Enable Row Level Security
+ALTER TABLE health_questionnaires ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for authenticated users
+CREATE POLICY "Authenticated users can insert health questionnaires"
+  ON health_questionnaires
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Users can view their own health questionnaires"
+  ON health_questionnaires
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Make sure workers table has the last_health_questionnaire column
+DO $$
+BEGIN
+  -- Make sure the last_health_questionnaire column exists in workers table
+  IF EXISTS (
+    SELECT FROM pg_tables 
+    WHERE schemaname = 'public' 
+    AND tablename = 'workers'
+  ) AND NOT EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'workers' 
+    AND column_name = 'last_health_questionnaire'
+  ) THEN
+    ALTER TABLE workers ADD COLUMN last_health_questionnaire TIMESTAMPTZ;
+  END IF;
+END
+$$;
+
+-- Create or update trigger function to update workers table
 CREATE OR REPLACE FUNCTION update_worker_from_questionnaire()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -120,8 +84,8 @@ BEGIN
   SET last_health_questionnaire = NEW.submission_date
   WHERE email = NEW.user_email;
   
-  -- If no rows were updated, insert a new worker record
-  IF NOT FOUND THEN
+  -- If no rows were updated and we have an email, insert a new worker record
+  IF NOT FOUND AND NEW.user_email IS NOT NULL THEN
     INSERT INTO workers (email, full_name, last_health_questionnaire)
     VALUES (NEW.user_email, NEW.full_name, NEW.submission_date);
   END IF;
@@ -130,19 +94,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Drop the trigger if it exists
+-- Drop the trigger if it exists and recreate it
 DROP TRIGGER IF EXISTS update_worker_from_questionnaire_trigger ON health_questionnaires;
 
--- Create the trigger
 CREATE TRIGGER update_worker_from_questionnaire_trigger
 AFTER INSERT ON health_questionnaires
 FOR EACH ROW
 EXECUTE FUNCTION update_worker_from_questionnaire();
 
--- Grant permissions to access these tables
-GRANT ALL ON TABLE workers TO authenticated;
-GRANT ALL ON TABLE workers TO anon;
-GRANT ALL ON TABLE health_checks TO authenticated;
-GRANT ALL ON TABLE health_checks TO anon;
+-- Grant permissions to access the health_questionnaires table
 GRANT ALL ON TABLE health_questionnaires TO authenticated;
 GRANT ALL ON TABLE health_questionnaires TO anon;

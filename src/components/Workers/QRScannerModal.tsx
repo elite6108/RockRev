@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+// Remove Html5Qrcode import as we'll use a more direct approach
 
 interface QRScannerModalProps {
   isOpen: boolean;
@@ -7,6 +7,16 @@ interface QRScannerModalProps {
   onCodeScanned: (decodedText: string) => void;
   scannedSiteId: string | null;
   scannedSiteName: string;
+}
+
+// We'll use a simple javascript QR code scanner library
+// This will be loaded dynamically when needed
+declare global {
+  interface Window {
+    jsQR?: (imageData: Uint8ClampedArray, width: number, height: number) => {
+      data: string;
+    } | null;
+  }
 }
 
 export function QRScannerModal({
@@ -18,76 +28,206 @@ export function QRScannerModal({
 }: QRScannerModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const qrReaderRef = useRef<Html5Qrcode | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationRef = useRef<number | null>(null);
 
+  // Load the jsQR library dynamically
   useEffect(() => {
-    // Initialize QR scanner when component mounts
-    if (isOpen && !scannedSiteId && !qrReaderRef.current) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        const qrReader = document.getElementById('qr-reader');
-        if (qrReader) {
-          try {
-            qrReaderRef.current = new Html5Qrcode('qr-reader');
-            startScanner();
-          } catch (err) {
-            console.error('Error initializing QR scanner:', err);
-            setError('Could not initialize camera. Please check permissions.');
-          }
+    if (isOpen && !window.jsQR) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+      script.async = true;
+      script.onload = () => {
+        console.log('jsQR library loaded');
+        if (!scannedSiteId) {
+          startCamera();
         }
-      }, 300);
+      };
+      script.onerror = () => {
+        setError('Failed to load QR scanner library. Please check your internet connection.');
+      };
+      document.body.appendChild(script);
+      return () => {
+        document.body.removeChild(script);
+      };
+    } else if (isOpen && window.jsQR && !scannedSiteId) {
+      startCamera();
     }
-
-    // Cleanup function
+    
     return () => {
-      stopScanner();
+      stopCamera();
     };
   }, [isOpen, scannedSiteId]);
 
-  const startScanner = async () => {
-    if (!qrReaderRef.current) return;
-
-    const qrScanner = qrReaderRef.current;
+  const startCamera = async () => {
+    console.log('Starting camera...');
+    setError(null);
     setScanning(true);
     
+    if (!videoRef.current) {
+      setError('Video element not available.');
+      return;
+    }
+    
     try {
-      await qrScanner.start(
-        { facingMode: 'environment' }, // Use rear camera if available
-        {
-          fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250,
-          },
-        },
-        (decodedText) => {
-          // QR code detected
-          console.log('QR code detected:', decodedText);
-          onCodeScanned(decodedText);
-          stopScanner();
-        },
-        (_errorMessage) => {
-          // Ignore in-progress scanning errors to prevent alert spam
-          console.log('QR scanning in progress...');
-        }
-      );
+      // First try to get the list of cameras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      console.log('Available cameras:', videoDevices);
+      
+      // Try to get the back camera if available
+      let constraints: MediaStreamConstraints;
+      
+      if (videoDevices.length > 1) {
+        // If we have multiple cameras, prefer the back camera (usually the second one)
+        constraints = {
+          video: {
+            deviceId: { exact: videoDevices[videoDevices.length > 1 ? 1 : 0].deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+      } else {
+        // Otherwise use environment facing mode (back camera)
+        constraints = {
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+      }
+      
+      console.log('Using constraints:', constraints);
+      
+      // Get the camera stream
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.style.display = 'block'; // Ensure video is visible
+        videoRef.current.play();
+        
+        // Wait for video to start playing before scanning
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded, starting QR detection...');
+          startQRDetection();
+        };
+      }
     } catch (err) {
-      console.error('Error starting scanner:', err);
-      setError('Could not access camera. Please check permissions.');
+      console.error('Error starting camera:', err);
+      handleCameraError(err);
       setScanning(false);
     }
   };
-
-  const stopScanner = async () => {
-    if (qrReaderRef.current && scanning) {
-      try {
-        await qrReaderRef.current.stop();
-        qrReaderRef.current = null;
-        setScanning(false);
-      } catch (err) {
-        console.error('Error stopping scanner:', err);
-      }
+  
+  const startQRDetection = () => {
+    if (!window.jsQR) {
+      console.error('jsQR library not loaded');
+      setError('QR scanner library not loaded. Please refresh and try again.');
+      return;
     }
+    
+    const scanQRCode = () => {
+      if (!videoRef.current || !canvasRef.current || scannedSiteId) {
+        return;
+      }
+      
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) return;
+      
+      // Make sure video is playing
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        animationRef.current = requestAnimationFrame(scanQRCode);
+        return;
+      }
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw current video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Get image data for QR detection
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Detect QR code
+      const code = window.jsQR?.(imageData.data, imageData.width, imageData.height);
+      
+      if (code) {
+        console.log('QR code detected:', code.data);
+        stopCamera();
+        onCodeScanned(code.data);
+        return;
+      }
+      
+      // Continue scanning if no QR code detected
+      animationRef.current = requestAnimationFrame(scanQRCode);
+    };
+    
+    // Start the scanning loop
+    scanQRCode();
+  };
+  
+  const stopCamera = () => {
+    console.log('Stopping camera...');
+    
+    // Stop animation frame
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    // Stop all media tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Clear video source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    setScanning(false);
+  };
+  
+  // Helper function to handle camera errors with specific messages
+  const handleCameraError = (err: any) => {
+    if (err instanceof Error) {
+      switch (err.name) {
+        case 'NotAllowedError':
+          setError('Camera permission denied. Please allow camera access in your browser settings.');
+          break;
+        case 'NotReadableError':
+          setError('Camera is in use by another application or has a hardware issue. Please close other camera apps and try again.');
+          break;
+        case 'NotFoundError':
+          setError('No camera was found on your device.');
+          break;
+        case 'OverconstrainedError':
+          setError('Your camera does not meet the required constraints. Try using a different device or browser.');
+          break;
+        default:
+          setError(`Camera error: ${err.message}`);
+      }
+    } else {
+      setError('Camera access failed. Please check your camera and try again.');
+    }
+  };
+  
+  const retryCamera = () => {
+    stopCamera();
+    setTimeout(() => {
+      startCamera();
+    }, 500);
   };
 
   if (!isOpen) return null;
@@ -161,13 +301,108 @@ export function QRScannerModal({
                   </p>
                 </div>
                 <div 
-                  id="qr-reader" 
-                  className="mx-auto"
-                  style={{ width: '100%', maxWidth: '500px', height: '300px', border: '1px solid #ccc' }}
-                ></div>
+                  className="mx-auto overflow-hidden relative"
+                  style={{ 
+                    width: '100%', 
+                    maxWidth: '500px', 
+                    height: '300px', 
+                    border: '1px solid #ccc',
+                    backgroundColor: '#000',
+                    position: 'relative',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                >
+                  {/* QR Scanner elements */}
+                  <video 
+                    ref={videoRef}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0
+                    }}
+                    playsInline
+                    muted
+                  />
+                  <canvas 
+                    ref={canvasRef} 
+                    style={{ display: 'none' }} 
+                  />
+                  
+                  {/* QR Scanner overlay - the white square corners */}
+                  <div style={{
+                    position: 'relative',
+                    width: '250px',
+                    height: '250px',
+                    border: '2px solid transparent',
+                    boxShadow: 'inset 0 0 0 5px rgba(255,255,255,0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 5
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: -2,
+                      left: -2,
+                      width: '30px',
+                      height: '30px',
+                      borderTop: '5px solid white',
+                      borderLeft: '5px solid white',
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      width: '30px',
+                      height: '30px',
+                      borderTop: '5px solid white',
+                      borderRight: '5px solid white',
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: -2,
+                      left: -2,
+                      width: '30px',
+                      height: '30px',
+                      borderBottom: '5px solid white',
+                      borderLeft: '5px solid white',
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -2,
+                      width: '30px',
+                      height: '30px',
+                      borderBottom: '5px solid white',
+                      borderRight: '5px solid white',
+                    }}></div>
+                  </div>
+                </div>
+                {scanning ? (
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                    Camera active - scanning for QR codes...
+                  </p>
+                ) : (
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                    Initializing camera...
+                  </p>
+                )}
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   Please allow camera access when prompted
                 </p>
+                {error && (
+                  <button 
+                    onClick={retryCamera}
+                    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    Try Again
+                  </button>
+                )}
               </div>
             )}
           </div>
