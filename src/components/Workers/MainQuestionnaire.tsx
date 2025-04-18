@@ -275,12 +275,55 @@ export function MainQuestionnaire({
 
       if (supabaseError) throw supabaseError;
 
-      // Simplified approach - just record in health_checks table
+      // Directly update the workers table with the health check date
       if (userEmail) {
         console.log('Recording health check for email:', userEmail);
         try {
-          // Insert directly into health_checks table
-          const { error } = await supabase
+          // First, try to update the worker record if it exists
+          const { data: existingWorker, error: checkError } = await supabase
+            .from('workers')
+            .select('id')
+            .eq('email', userEmail)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.error('Error checking for existing worker:', checkError);
+          }
+          
+          if (existingWorker) {
+            // Update existing worker record
+            const { error: updateError } = await supabase
+              .from('workers')
+              .update({
+                last_health_questionnaire: currentDate
+              })
+              .eq('email', userEmail);
+              
+            if (updateError) {
+              console.error('Error updating worker record:', updateError);
+            } else {
+              console.log('Worker record updated successfully');
+            }
+          } else {
+            // Insert new worker record
+            const { error: insertError } = await supabase
+              .from('workers')
+              .insert([
+                {
+                  email: userEmail,
+                  last_health_questionnaire: currentDate
+                }
+              ]);
+              
+            if (insertError) {
+              console.error('Error inserting worker record:', insertError);
+            } else {
+              console.log('New worker record created successfully');
+            }
+          }
+          
+          // Also insert into health_checks table for record-keeping
+          const { error: healthCheckError } = await supabase
             .from('health_checks')
             .insert([
               {
@@ -292,9 +335,8 @@ export function MainQuestionnaire({
               }
             ]);
             
-          if (error) {
-            console.error('Error recording health check:', error);
-            console.log('Continuing anyway - health check will be considered completed');
+          if (healthCheckError) {
+            console.error('Error recording health check:', healthCheckError);
           } else {
             console.log('Health check recorded successfully');
           }

@@ -1,14 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import {
-  LogOut,
-  HardHat,
-  AlertTriangle,
-  FileText,
-  User,
-  Moon,
-  Sun,
-} from 'lucide-react';
+import { LogOutIcon, HardHatIcon, AlertTriangle, FileText, UserIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { WorkerProfile } from './Workers/WorkerProfile';
 import { MainQuestionnaire } from './Workers/MainQuestionnaire';
 import { ShortQuestionnaire } from './Workers/ShortQuestionnaire';
@@ -354,7 +346,7 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <HardHat className="h-8 w-8 text-amber-500" />
+                <HardHatIcon className="h-8 w-8 text-amber-500" />
                 <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
                   Worker Portal
                 </span>
@@ -367,9 +359,9 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                 className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
               >
                 {isDarkMode ? (
-                  <Sun className="h-5 w-5" />
+                  <SunIcon className="h-5 w-5" />
                 ) : (
-                  <Moon className="h-5 w-5" />
+                  <MoonIcon className="h-5 w-5" />
                 )}
               </button>
               <div className="ml-3 relative">
@@ -381,7 +373,7 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                     <span className="mr-2">
                       {user?.full_name || user?.email}
                     </span>
-                    <User className="h-8 w-8" />
+                    <UserIcon className="h-8 w-8" />
                   </button>
                 </div>
                 {isMenuOpen && (
@@ -390,14 +382,14 @@ export function WorkerDashboard({ selectedProjectId }: WorkerDashboardProps) {
                       onClick={handleMyProfile}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     >
-                      <User className="h-4 w-4 mr-2" />
+                      <UserIcon className="h-4 w-4 mr-2" />
                       My Profile
                     </button>
                     <button
                       onClick={handleSignOut}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     >
-                      <LogOut className="h-4 w-4 mr-2" />
+                      <LogOutIcon className="h-4 w-4 mr-2" />
                       Sign out
                     </button>
                   </div>
