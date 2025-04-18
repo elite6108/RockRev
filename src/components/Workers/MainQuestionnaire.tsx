@@ -275,48 +275,52 @@ export function MainQuestionnaire({
 
       if (supabaseError) throw supabaseError;
 
-      // Use our new function to update the worker health check status
+      // Use our record_health_check function to update the health check status
       if (userEmail) {
-        console.log('Updating worker health check for email:', userEmail);
+        console.log('Recording health check for email:', userEmail);
         try {
-          // Try using our new RPC function first
-          const { data: updateResult, error: rpcError } = await supabase.rpc('update_worker_health_check', {
-            p_email: userEmail,
-            p_questionnaire_id: null
+          // Try using our record_health_check function
+          const { error } = await supabase.rpc('record_health_check', {
+            p_email: userEmail
           });
           
-          if (rpcError) {
-            console.error('Error using RPC function:', rpcError);
+          if (error) {
+            console.error('Error recording health check:', error);
             
-            // Fallback: Try direct update if the worker record exists
-            const { error: updateError } = await supabase
-              .from('workers')
-              .update({
-                last_short_questionnaire_date: currentDate,
-                last_health_questionnaire: currentDate
-              })
-              .eq('email', userEmail);
-            
-            if (updateError) {
-              console.error('Error updating worker record:', updateError);
+            // Fallback: Try to insert directly into health_checks table
+            const { error: insertError } = await supabase
+              .from('health_checks')
+              .insert([
+                {
+                  email: userEmail,
+                  completed_at: currentDate,
+                  fit_to_work: true
+                }
+              ]);
               
-              // Last resort: Try to insert a new worker record
-              const { error: insertError } = await supabase
-                .from('workers')
-                .insert([
-                  {
-                    email: userEmail,
-                    last_short_questionnaire_date: currentDate,
-                    last_health_questionnaire: currentDate
-                  }
-                ]);
+            if (insertError) {
+              console.error('Error inserting health check record:', insertError);
               
-              if (insertError) {
-                console.error('Error inserting worker record:', insertError);
+              // Last resort: Try direct update of workers table
+              try {
+                const { error: workerError } = await supabase
+                  .from('workers')
+                  .upsert([
+                    {
+                      email: userEmail,
+                      last_health_questionnaire: currentDate
+                    }
+                  ]);
+                  
+                if (workerError) {
+                  console.error('Error updating worker record:', workerError);
+                }
+              } catch (err) {
+                console.error('Error in worker update:', err);
               }
             }
           } else {
-            console.log('Worker health check update result:', updateResult);
+            console.log('Health check recorded successfully');
           }
         } catch (err) {
           console.error('Error in health questionnaire update:', err);
