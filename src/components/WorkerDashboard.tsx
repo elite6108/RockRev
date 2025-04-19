@@ -353,14 +353,58 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
           
           // Record the check-in
           if (user?.email) {
+            // Get the most up-to-date user data to ensure we have the latest metadata
+            const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+            if (userError) {
+              console.error('Error getting current user:', userError);
+            }
+            
+            // Get worker details if available
+            let workerData = null;
+            const { data: worker, error: workerError } = await supabase
+              .from('workers')
+              .select('*')
+              .eq('email', user.email)
+              .maybeSingle();
+              
+            if (!workerError && worker) {
+              workerData = worker;
+            }
+            
+            // Determine the best values to use for name, company, and phone
+            const displayName = 
+              workerData?.full_name || 
+              currentUser?.user_metadata?.full_name || 
+              user.user_metadata?.full_name || 
+              user.email.split('@')[0] || 
+              'Unknown User';
+              
+            const displayCompany = 
+              workerData?.company || 
+              currentUser?.user_metadata?.company || 
+              user.user_metadata?.company || 
+              '';
+              
+            const displayPhone = 
+              workerData?.phone || 
+              currentUser?.user_metadata?.phone || 
+              user.user_metadata?.phone || 
+              '';
+            
+            console.log('Creating site log with:', { 
+              name: displayName, 
+              company: displayCompany, 
+              phone: displayPhone 
+            });
+            
             // Insert into the correct site_logs table with the required fields
             const { error: logError } = await supabase
               .from('site_logs')
               .insert([{
                 site_id: siteId,
-                full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
-                phone: user.user_metadata?.phone || '',
-                company: user.user_metadata?.company || '',
+                full_name: displayName,
+                phone: displayPhone,
+                company: displayCompany,
                 email: user.email,
                 fit_to_work: true, // Assuming the user is fit to work when checking in
                 logged_in_at: new Date().toISOString(),
@@ -397,14 +441,58 @@ export function WorkerDashboard({}: WorkerDashboardProps) {
           
           // Record the check-in
           if (user?.email) {
+            // Get the most up-to-date user data to ensure we have the latest metadata
+            const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+            if (userError) {
+              console.error('Error getting current user:', userError);
+            }
+            
+            // Get worker details if available
+            let workerData = null;
+            const { data: worker, error: workerError } = await supabase
+              .from('workers')
+              .select('*')
+              .eq('email', user.email)
+              .maybeSingle();
+              
+            if (!workerError && worker) {
+              workerData = worker;
+            }
+            
+            // Determine the best values to use for name, company, and phone
+            const displayName = 
+              workerData?.full_name || 
+              currentUser?.user_metadata?.full_name || 
+              user.user_metadata?.full_name || 
+              user.email.split('@')[0] || 
+              'Unknown User';
+              
+            const displayCompany = 
+              workerData?.company || 
+              currentUser?.user_metadata?.company || 
+              user.user_metadata?.company || 
+              '';
+              
+            const displayPhone = 
+              workerData?.phone || 
+              currentUser?.user_metadata?.phone || 
+              user.user_metadata?.phone || 
+              '';
+            
+            console.log('Creating site log with:', { 
+              name: displayName, 
+              company: displayCompany, 
+              phone: displayPhone 
+            });
+            
             // Insert into the correct site_logs table with the required fields
             const { error: logError } = await supabase
               .from('site_logs')
               .insert([{
                 site_id: decodedText,
-                full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
-                phone: user.user_metadata?.phone || '',
-                company: user.user_metadata?.company || '',
+                full_name: displayName,
+                phone: displayPhone,
+                company: displayCompany,
                 email: user.email,
                 fit_to_work: true, // Assuming the user is fit to work when checking in
                 logged_in_at: new Date().toISOString(),

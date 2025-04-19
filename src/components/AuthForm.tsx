@@ -153,6 +153,9 @@ export function AuthForm({ onForgotPassword }: AuthFormProps) {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
               user_type: userType,
+              full_name: name,
+              company: company,
+              phone: phone
             },
           },
         });
