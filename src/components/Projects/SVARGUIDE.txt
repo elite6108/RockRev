@@ -1,0 +1,1751 @@
+Step 1. Install the package
+SVAR Gantt is an open-source library distributed under the GPLv3 license.
+
+Install package from NPM.
+
+npm install wx-react-gantt
+
+Step 2. Create and initialize the Gantt chart
+Import the Gantt component to your project:
+
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+Initialize Gantt. tasks, links, scales, columns are the main Gantt elements but they are not required for the initialization stage. The example below will create an empty chart with the timescale and the area for tasks tree:
+
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+function App() {
+  return <Gantt />;
+}
+
+export default App;
+
+The next example shows how to create a simple chart with one summary task and one task in it, and two separate tasks and one dependency link between them. The minimum scales unit is "day". You do not need to add the columns array for the grid area, four columns will be displayed by default: "Task name", "Start Date", "Duration", and the action button for adding tasks.
+
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React, { useRef, useEffect } from "react";
+
+const MyGanttComponent = () => {
+  const tasks = [
+    {
+      id: 20,
+      text: "New Task",
+      start: new Date(2024, 5, 11),
+      end: new Date(2024, 6, 12),
+      duration: 1,
+      progress: 2,
+      type: "task",
+      lazy: false,
+    },
+    {
+      id: 47,
+      text: "[1] Master project",
+      start: new Date(2024, 5, 12),
+      end: new Date(2024, 7, 12),
+      duration: 8,
+      progress: 0,
+      parent: 0,
+      type: "summary",
+    },
+    {
+      id: 22,
+      text: "Task",
+      start: new Date(2024, 7, 11),
+      end: new Date(2024, 8, 12),
+      duration: 8,
+      progress: 0,
+      parent: 47,
+      type: "task",
+    },
+    {
+      id: 21,
+      text: "New Task 2",
+      start: new Date(2024, 7, 10),
+      end: new Date(2024, 8, 12),
+      duration: 3,
+      progress: 0,
+      type: "task",
+      lazy: false,
+    },
+  ];
+
+  const links = [{ id: 1, source: 20, target: 21, type: "e2e" }];
+
+  const scales = [
+    { unit: "month", step: 1, format: "MMMM yyy" },
+    { unit: "day", step: 1, format: "d" },
+  ];
+
+  return <Gantt tasks={tasks} links={links} scales={scales} />;
+};
+
+export default MyGanttComponent;
+
+More instructions about loading data you can see here Loading data.
+
+Step 3. Apply a theme
+To add look and feel to the application, import one of the predefined themes, which will also make all elements display correctly:
+
+Willow
+WillowDark
+Apply the desired theme by wrapping Gantt into the required theme tag:
+
+import React from 'react';
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import { Willow } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css"; //import theme
+
+const Component = () => {
+  const data = getData();
+
+  return (
+    <Willow>
+      <Gantt tasks={data.tasks} />
+    </Willow>
+  );
+};
+
+export default Component;
+
+Zooming
+Enabling default zoom settings
+To enable default zooming, set the zoom property to true.
+ZOOMING:
+
+
+Example:
+
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const App = () => {
+  const data = getData();
+
+  return <Gantt zoom={true} tasks={data.tasks} />;
+};
+
+export default App;
+
+Configuring zoom settings
+To configure zoom settings, change the required parameters of the zoom property.
+
+Example:
+
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+const zoomConfig = {
+  maxCellWidth: 400,
+  level: 3,
+  levels: [
+    {
+      minCellWidth: 200,
+      scales: [{ unit: "year", step: 1, format: "yyyy" }],
+    },
+    {
+      minCellWidth: 150,
+      scales: [
+        { unit: "year", step: 1, format: "yyyy" },
+        { unit: "quarter", step: 1, format: "QQQQ" },
+      ],
+    },
+    {
+      minCellWidth: 250,
+      scales: [
+        { unit: "quarter", step: 1, format: "QQQQ" },
+        { unit: "month", step: 1, format: "MMMM yyy" },
+      ],
+    },
+    {
+      minCellWidth: 100,
+      scales: [
+        { unit: "month", step: 1, format: "MMMM yyy" },
+        { unit: "week", step: 1, format: "'week' w" },
+      ],
+    },
+    {
+      maxCellWidth: 200,
+      scales: [
+        { unit: "month", step: 1, format: "MMMM yyy" },
+        { unit: "day", step: 1, format: "d", css: dayStyle },
+      ],
+    },
+    {
+      minCellWidth: 25,
+      scales: [
+        { unit: "day", step: 1, format: "MMM d", css: dayStyle },
+        { unit: "hour", step: 6, format: hoursTemplate },
+      ],
+    },
+    {
+      scales: [
+        { unit: "day", step: 1, format: "MMM d", css: dayStyle },
+        { unit: "hour", step: 1, format: "HH:mm" },
+      ],
+    },
+  ],
+};
+
+function App() {
+  return (
+    <Gantt zoom={zoomConfig} tasks={data.tasks} />
+  );
+}
+
+export default App;
+
+
+TOOLBAR
+import { getData } from "./common/data";
+import { Gantt, Toolbar } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+function App() {
+  const data = getData();
+
+  const apiRef = useRef();
+
+  return (
+    <>
+      <Toolbar api={apiRef.current} />
+
+      <Gantt apiRef={apiRef} tasks={data.tasks} />
+    </>
+  );
+}
+
+export default App;
+
+Configuring the set of buttons in the toolbar
+To configure the toolbar (the set of buttons in the toolbar and their appearance), import the Toolbar component of Gantt and make necessary changes to the items array. Do not forget to add the items attribute to the Toolbar tag.
+
+import { getData } from "../data";
+import { Gantt, Toolbar } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React, { useRef } from "react";
+
+const Component = () => {
+  const apiRef = useRef();
+  const data = getData();
+
+  const items = [
+    {
+      id: "add-task",
+      comp: "button",
+      icon: "wxi-plus",
+      text: "Add task",
+      type: "primary",
+    },
+    {
+      id: "edit-task",
+      comp: "button",
+      icon: "wxi-edit",
+      text: "edit",
+      type: "link",
+    },
+  ];
+
+  return (
+    <>
+      <Toolbar api={apiRef.current} items={items} />
+      <Gantt apiRef={apiRef} tasks={data.tasks} />
+    </>
+  );
+};
+
+export default Component;
+
+You can also customize the Toolbar by importing and changing the defaultToolbarButtons array.
+
+import { getData } from "../data";
+import { Gantt, Toolbar, defaultToolbarButtons } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+function MyComponent() {
+  const apiRef = useRef();
+
+  const data = getData();
+
+  // remove indentation buttons
+  const items = defaultToolbarButtons.filter(b => {
+    return b.id?.indexOf("indent") === -1;
+  });
+
+  return (
+    <>
+      <Toolbar apiRef={apiRef} items={items} />
+      <Gantt apiRef={apiRef} tasks={data.tasks} />
+    </>
+  );
+}
+
+export default MyComponent;
+
+Adding a custom toolbar
+The example below shows how to add a custom toolbar by applying the external Toolbar component. We import the Toolbar component, add functions to handle the actions using the api.exec() method, and modify the items array.
+
+import React, { useRef, useEffect, useState } from "react";
+import { getData } from "../data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { Toolbar } from "wx-react-toolbar";
+
+const GanttComponent = () => {
+  const apiRef = useRef();
+  const data = getData();
+  const [selected, setSelected] = useState([]);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    if (apiRef.current) {
+      setSelected(apiRef.current.getReactiveState().selected);
+      setItems(selected.length ? allItems : [allItems[0]]);
+    }
+  }, [selected]);
+
+  const handleAdd = () => {
+    apiRef.current.exec("add-task", {
+      task: {
+        text: "New task",
+      },
+      target: selected[0],
+      mode: "after",
+    });
+  };
+
+  const handleDelete = () => {
+    const order = getActionOrder(true);
+    order.forEach(id => apiRef.current.exec("delete-task", { id }));
+  };
+
+  const handleMove = (mode) => {
+    const changeDir = mode === "down";
+    const order = getActionOrder(changeDir);
+    order.forEach(id => apiRef.current.exec("move-task", { id, mode }));
+  };
+
+  const getActionOrder = (changeDir) => {
+    const tasks = selected
+      .map(id => apiRef.current.getTask(id))
+      .sort((a, b) => {
+        return a.$level - b.$level || a.$y - b.$y;
+      });
+    const idOrder = tasks.map(o => o.id);
+
+    if (changeDir) return idOrder.reverse();
+    return idOrder;
+  };
+
+  const allItems = [
+    {
+      comp: "button",
+      type: "primary",
+      text: "Add task",
+      handler: handleAdd,
+    },
+    {
+      comp: "button",
+      text: "Delete task",
+      handler: handleDelete,
+    },
+    {
+      comp: "button",
+      type: "primary",
+      text: "Move task down",
+      handler: () => handleMove("down"),
+    },
+    {
+      comp: "button",
+      type: "primary",
+      text: "Move task up",
+      handler: () => handleMove("up"),
+    },
+  ];
+
+  return (
+    <>
+      <Toolbar items={items} />
+      <div className="gtcell">
+        <Gantt
+          ref={apiRef}
+          tasks={data.tasks}
+          links={data.links}
+          scales={data.scales}
+        />
+      </div>
+    </>
+  );
+};
+
+export default GanttComponent;
+
+.gtcell {
+  height: calc(100% - 50px);
+  border-top: var(--wx-gantt-border);
+}
+
+
+TASK TREE
+Configuring the tasks tree area
+The grid with tasks tree can be used for quick navigation.
+
+By default, the tasks tree area contains 4 columns:
+
+Task name
+Start date
+Duration
+'+' column. A special column with the '+' button which allows users to add tasks
+Configuring columns
+Columns with default parameters are applied by default and you don't need to specify the columns objects.
+
+Default columns array you can see here: columns.
+
+Adding a column
+If you want to add a new column, add the columns object to the array and specify its id parameter in the task object. id is the mandatory parameter which defines the content of cells and the cell will take the value of the matching property from a task by default.
+
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React, { useRef } from "react";
+
+const GanttComponent = () => {
+  const columns = [
+    { id: "holder", header: "Holder", width: 90, align: "center" },
+    //other columns
+  ];
+
+  const tasks = [
+    {
+      id: 1,
+      start: new Date(2022, 2, 4),
+      end: new Date(2023, 2, 4),
+      progress: 20,
+      parent: 1,
+      type: "task",
+      holder: "Nick",
+    },
+    //other tasks
+  ];
+
+  return <Gantt tasks={tasks} columns={columns} />;
+};
+
+export default GanttComponent;
+
+Configuring columns width
+To add columns with the fixed width, set the width value, the default value is 120. To make the width of columns flexible, apply the flexgrow parameter of the columns property. It specifies specifies how much space (width) relative to the grid width the column will take (it will take no effect on columns with the set width); the property is specified as a number and if flexgrow is set to 1 in one column only, the column will take the full available width.
+
+Example:
+
+import { getData } from "../data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+const GanttComponent = () => {
+  const data = getData();
+
+  const columns = [
+    { id: "text", header: "Task name", flexgrow: 2 },
+    {
+      id: "start",
+      header: "Start date",
+      flexgrow: 1,
+      align: "center",
+    },
+    {
+      id: "duration",
+      header: "Duration",
+      align: "center",
+      flexgrow: 1,
+    },
+    {
+      id: "action",
+      header: "",
+      width: 50,
+      align: "center",
+    },
+  ];
+
+  return (
+    <Gantt
+      tasks={data.tasks}
+      links={data.links}
+      scales={data.scales}
+      columns={columns}
+    />
+  );
+};
+
+export default GanttComponent;
+
+Disabling the tasks reordering
+By default, a user can reorder tasks in the grid area with drag&drop. To disable the tasks ordering feature, you can apply the api.intercept() method to handle the drag-task action.
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+const MyComponent = () => {
+  const data = getData();
+  const apiRef = useRef();
+
+  if (apiRef.current) {
+    apiRef.current.intercept("drag-task", ev => {
+      if (typeof ev.top !== "undefined")
+        return false;
+    });
+  }
+
+  return (
+    <Gantt
+      columns={data.columns}
+      tasks={data.tasks}
+      ref={apiRef}
+    />
+  );
+};
+
+export default MyComponent;
+
+Another way to disable the feature is to switch to the read-only mode.
+
+Hiding the tasks tree area
+To hide the area with tasks tree, set the columns property to false:
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function App() {
+  return (
+    <Gantt
+      columns={false}
+      tasks={data.tasks}
+    />
+  );
+}
+
+export default App;
+
+
+SUMMARY TASKS
+Configuring summary tasks
+Default functionality
+A summary task is a group of tasks, milestones and other summary tasks (or other custom items created by a user). A summary task has the next default settings:
+
+The start and end dates of a summary task depend on child tasks. If a child task is rescheduled to start before the start date of a summary task, the summary task's start date changes. If a child task is rescheduled to end after a summary task's end date, the summary task's end date changes.
+Its start and end dates cannot be changed separately. That's why a summary task's bar cannot be resized. A user can drag a summary task only with its child tasks. If a summary task is shifted, all its child tasks will be moved too.
+The progress of summary tasks is set manually in UI and does not depend on the progress of its child tasks (please, see Change task progress)
+Tasks with child tasks are not converted into summary tasks automatically, a user can convert a task into another type manually ( see convert one task type into another)
+The Gantt API allows configuring this default behavior.
+
+Enabling the auto calculation of summary tasks' progress
+By default, a user can set the progress of tasks only manually. The example below demonstrates how to enable the auto calculation of summary tasks' progress that will be based on the progress of its child tasks. The formula that is applied for calculation is ∑d*p / ∑d , where "d" is task duration in days and "p" is the task progress, and "∑" stands for a sum of all loaded tasks.
+
+import { useEffect, useRef } from "react";
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const dayDiff = (next, prev) => {
+    const d = (next - prev) / 1000 / 60 / 60 / 24;
+    return Math.ceil(Math.abs(d));
+};
+
+const data = getData();
+
+const GanttComponent = () => {
+    const tasks = data.tasks;
+    const gApiRef = useRef();
+
+    const getSummaryProgress = (id) => {
+        const [totalProgress, totalDuration] = collectProgressFromKids(id);
+        const res = totalProgress / totalDuration;
+        return isNaN(res) ? 0 : Math.round(res);
+    };
+
+    const collectProgressFromKids = (id) => {
+        let totalProgress = 0,
+            totalDuration = 0;
+        const kids = gApiRef.current.getTask(id).data;
+
+        kids?.forEach((kid) => {
+            let duration = 0;
+            if (kid.type !== "milestone" && kid.type !== "summary") {
+                duration = kid.duration || dayDiff(kid.end, kid.start);
+                totalDuration += duration;
+                totalProgress += duration * kid.progress;
+            }
+
+            const [p, d] = collectProgressFromKids(kid.id);
+            totalProgress += p;
+            totalDuration += d;
+        });
+        return [totalProgress, totalDuration];
+    };
+
+    const recalcSummaryProgress = (id, self) => {
+        const { tasks } = gApiRef.current.getState();
+        const task = gApiRef.current.getTask(id);
+
+        if (task.type !== "milestone") {
+            const summary = self && task.type === "summary" ? id : tasks.getSummaryId(id);
+
+            if (summary) {
+                const progress = getSummaryProgress(summary);
+                gApiRef.current.exec("update-task", {
+                    id: summary,
+                    task: { progress },
+                });
+            }
+        }
+    };
+
+    const init = (api) => {
+        gApiRef.current = api;
+
+        api.getState().tasks.forEach((task) => {
+            recalcSummaryProgress(task.id, true);
+        });
+
+        api.on("add-task", ({ id }) => {
+            recalcSummaryProgress(id);
+        });
+        api.on("update-task", ({ id }) => {
+            recalcSummaryProgress(id);
+        });
+
+        api.on("delete-task", ({ source }) => {
+            recalcSummaryProgress(source, true);
+        });
+        api.on("copy-task", ({ id }) => {
+            recalcSummaryProgress(id);
+        });
+        api.on("move-task", ({ id, source, inProgress }) => {
+            if (inProgress) return;
+
+            if (api.getTask(id).parent !== source) recalcSummaryProgress(source, true);
+            recalcSummaryProgress(id);
+        });
+    };
+
+    return (
+        <Gantt
+            init={init}
+            tasks={tasks}
+            links={data.links}
+            scales={data.scales}
+            cellWidth={30}
+        />
+    );
+};
+
+export default GanttComponent;
+
+Making parent tasks auto convert into summary tasks
+By default, a user can convert other tasks into a summary task only manually. The example below shows how to make all parent tasks automatically convert into a summary task and vice versa (from "summary" to "task" in case no child tasks found in a task).
+
+The getTask method is used to identify if it's a parent task. The api.exec() method triggers the update-task action for a parent task and changes the task type to "summary". The same method is applied to change the task type into "task" in case the length of the data array is 0 (no child items found). The getState() method identifies the type of each task, and the api.on() method listens to the add-task, move-task, and delete-task actions to convert parent tasks to summary tasks and explicitly update summary tasks while loading data.
+
+import { useEffect, useRef } from "react";
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+export default function SomeComponent({ skinSettings }) {
+    const data = getData();
+    const apiRef = useRef();
+
+    const toSummary = (id, self) => {
+        const task = apiRef.current.getTask(id);
+        if (!self) id = task.parent;
+
+        if (id && task.type !== "summary") {
+            apiRef.current.exec("update-task", {
+                id,
+                task: { type: "summary" },
+            });
+        }
+    };
+
+    const toTask = (id) => {
+        const obj = apiRef.current.getTask(id);
+        if (obj && !obj.data?.length) {
+            apiRef.current.exec("update-task", {
+                id,
+                task: { type: "task" },
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (apiRef.current) {
+            // convert parent tasks to summary
+            // will load data and then explicitly update summary tasks
+            apiRef.current.getState().tasks.forEach((task) => {
+                if (task.data?.length) {
+                    toSummary(task.id, true);
+                }
+            });
+
+            apiRef.current.on("add-task", (ev) => {
+                const { id, mode } = ev;
+                if (mode === "child") toSummary(id);
+            });
+
+            apiRef.current.on("move-task", (ev) => {
+                const { id, source, mode, inProgress } = ev;
+                if (inProgress) return;
+                if (mode === "child") toSummary(id);
+                else toTask(source);
+            });
+
+            apiRef.current.on("delete-task", (ev) => {
+                const { source } = ev;
+                toTask(source);
+            });
+        }
+    }, []);
+
+    return (
+        <Gantt
+            apiRef={apiRef}
+            tasks={data.tasks}
+            links={data.links}
+            scales={data.scales}
+        />
+    );
+}
+
+Disabling the ability to drag the bar of a summary task
+To disable the ability to drag a summary task's bar in UI, in the example below we apply the api.intercept() method to modify the drag-task action for the "summary" task type. To identify the task type, we apply the getTask method.
+
+import { useEffect, useRef } from "react";
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+function GanttComponent() {
+    const data = getData();
+    const apiRef = useRef();
+
+    useEffect(() => {
+        if (apiRef.current) {
+            apiRef.current.intercept("drag-task", ({ id, top }) => {
+                return !(typeof top === "undefined" && apiRef.current.getTask(id).type === "summary");
+            });
+        }
+    }, [apiRef.current]);
+
+    return (
+        <Gantt 
+            apiRef={apiRef}
+            tasks={data.tasks}
+            links={data.links}
+            scales={data.scales} 
+        />
+    );
+}
+
+export default GanttComponent;
+
+CONFIGURING SCALES
+Adding scales and changing main properties
+You can specify any number of scales by setting the scale objects in the scales array. To configure scales, change the scales parameters values.
+
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const scales = [
+  { unit: "month", step: 1, format: "MMMM yyy" },
+  { unit: "day", step: 1, format: "d" },
+];
+
+function Component() {
+  const data = getData();
+  return <Gantt tasks={data.tasks} scales={scales} />;
+}
+
+export default Component;
+
+Setting the start and end dates of the timescale
+You can set the date range by using the start and end properties during initialization:
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React, { useRef } from "react";
+
+const App = () => {
+  const data = getData();
+  const start = new Date(2022, 2, 5);
+  const end = new Date(2023, 3, 1);
+
+  return (
+    <Gantt
+      tasks={data.tasks}
+      start={start}
+      end={end}
+    />
+  );
+};
+
+export default App;
+
+info
+If the date range is not set, Gantt uses the dates of the loaded tasks and adds offsets before the first and after the last task in the scale. The offset is equal to one minimal unit of the current scale. The timescale changes dynamically when the tasks' dates are changed. But if the start and end values are set, the date range is fixed.
+
+Styling cells
+To style the cells of the time scale, use the css attribute in the corresponding scale object.
+
+import { getData } from "../data";
+import { Gantt } from "../../src/";
+
+const data = getData();
+
+const dayStyle = (a) => {
+  const day = a.getDay() === 5 || a.getDay() === 6;
+  return day ? "sday" : "";
+};
+
+const complexScales = [
+  { unit: "year", step: 1, format: "yyyy" },
+  { unit: "month", step: 2, format: "MMMM yyy" },
+  { unit: "week", step: 1, format: "w" },
+  { unit: "day", step: 1, format: "d", css: dayStyle },
+];
+
+function App() {
+  return (
+    <Gantt
+      {...skinSettings}
+      tasks={data.tasks}
+      links={data.links}
+      scales={complexScales}
+      start={new Date(2020, 2, 1)}
+      end={new Date(2020, 3, 12)}
+      cellWidth={60}
+    />
+  );
+}
+
+export default App;
+
+Configuring the scale height
+To configure the height of scales, apply the scaleHeight property and change its value in pixels:
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+const GanttComponent = () => {
+  const data = getData();
+  const scaleHeightRef = useRef(50);
+
+  return <Gantt tasks={data.tasks} scaleHeight={scaleHeightRef.current} />;
+};
+
+export default GanttComponent;
+
+
+GANT TASK EDITOR
+Configuring the editor
+The task editor modal dialog consists of the fields for managing tasks data. To configure the editor fields (controls), use the editorShape property with the following types of the editor fields:
+
+text and textarea
+date
+slider
+select
+counter
+link
+For example, the editor fields of the text type you can set in the following way:
+
+const editorShape = [
+  {
+    key: "text",
+    type: "text",
+    label: "Name",
+    config: {
+      placeholder: "Add task name",
+      focus: true,
+    },
+  },
+  //other settings
+];
+
+To configure default editor fields, import the defaultEditorShape array, modify it, and pass the modified array to Gantt.
+
+The example below shows how to remove the "Description" field that has the "details" key from the editor:
+
+import { getData } from "./data";
+import { Gantt, defaultEditorShape } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React from "react";
+
+const GanttComponent = () => {
+  const data = getData();
+  const editorShape = defaultEditorShape.filter(item => item.key !== 'details');
+
+  return (
+    <Gantt
+      columns={false}
+      tasks={data.tasks}
+      editorShape={editorShape}
+    />
+  );
+};
+
+export default GanttComponent;
+
+CHART SIZE
+Setting the cell width and height
+To set the cell width, use the cellWidth property. The default value is 100.
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useState } from "react";
+
+function GanttComponent() {
+  const data = getData();
+  const [cellWidth, setCellWidth] = useState(150);
+
+  return <Gantt tasks={data.tasks} scales={data.scales} cellWidth={cellWidth} />;
+}
+
+export default GanttComponent;
+
+To set the cell height, use the cellHeight property. The default value is 38.
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+function App() {
+  const data = getData();
+  const cellHeight = useRef(38);
+
+  return (
+    <Gantt tasks={data.tasks} scales={data.scales} cellHeight={cellHeight.current} />
+  );
+}
+
+export default App;
+
+Setting the task length unit
+You can use the lengthUnit property to set the minimal unit of task length displayed in a chart, which is day by default. The lengthUnit should be equal to or smaller than the scales unit. Possible lengthUnit values: hour, day, week, month, quarter.
+
+Example:
+
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useState } from "react";
+
+function GanttComponent() {
+  const data = getData();
+  const [lengthUnit, setLengthUnit] = useState("hour");
+
+  return (
+    <Gantt
+      tasks={data.tasks}
+      lengthUnit={lengthUnit}
+    />
+  );
+}
+
+export default GanttComponent;
+
+
+CONTEXT MENU
+Configuring the context menu
+info
+The description of the ContextMenu component see here: ContextMenu helper
+
+Adding default context menu
+To add context menu with default menu options, import the ContextMenu component from "wx-react-gantt" and wrap Gantt into the ContextMenu tag. You should also pass the api object to the ContextMenu component.
+
+import { useEffect, useRef } from "react";
+import { getData } from "../data";
+import { Gantt, ContextMenu } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const MyComponent = () => {
+  const apiRef = useRef();
+  const data = getData();
+
+  useEffect(() => {
+    apiRef.current = api;
+  }, []);
+
+  return (
+    <ContextMenu api={apiRef.current}>
+      <Gantt
+        apiRef={apiRef}
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+      />
+    </ContextMenu>
+  );
+};
+
+export default MyComponent;
+
+Configuring menu options
+To customize menu options, import the ContextMenu component, and then modify the options settings. To add subitems, add objects to the data array inside the options item object.
+
+Example:
+
+import { getData } from "../data";
+import { Gantt, ContextMenu } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import React, { useRef, useEffect } from "react";
+
+const MyComponent = () => {
+  const apiRef = useRef();
+  const data = getData();
+
+  const options = [
+    {
+      id: "add-task",
+      text: "Add",
+      icon: "wxi-plus",
+      data: [{ id: "add-task:child", text: "Child task" }],
+    },
+    { type: "separator" },
+    {
+      id: "edit-task",
+      text: "Edit",
+      icon: "wxi-edit",
+    },
+    { id: "cut-task", text: "Cut", icon: "wxi-content-cut" },
+  ];
+
+  useEffect(() => {
+    if (apiRef.current) {
+      apiRef.current = apiRef.current;
+    }
+  }, [apiRef.current]);
+
+  return (
+    <ContextMenu api={apiRef.current} options={options}>
+      <Gantt
+        apiRef={apiRef}
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+      />
+    </ContextMenu>
+  );
+};
+
+export default MyComponent;
+
+You can also import the ready-made defaultMenuOptions array, modify the required parameters, and pass the modified array to the ContextMenu.
+
+Showing context menu for specific tasks
+The resolver property of the ContextMenu component allows you to define tasks for which to show the menu.
+
+The example below shows how to show the context menu only for tasks with the id > 2.
+
+import { getData } from "../data";
+import { Gantt, ContextMenu } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef } from "react";
+
+const MyComponent = ({ skinSettings }) => {
+  const data = getData();
+  const apiRef = useRef();
+
+  // show menu for certain tasks
+  function resolver(id) {
+    return id > 2;
+  }
+
+  return (
+    <ContextMenu api={apiRef.current} resolver={resolver}>
+      <Gantt
+        apiRef={apiRef}
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+      />
+    </ContextMenu>
+  );
+};
+
+export default MyComponent;
+
+Filtering menu options
+In the example below we hide the "Delete" menu option for the "summary" task type:
+
+import { useRef } from "react";
+import { getData } from "../data";
+import { Gantt, ContextMenu } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const MyComponent = () => {
+    const apiRef = useRef();
+    const data = getData();
+
+    const filterMenu = (option, task) => {
+        const type = task.type;
+        if (option.id === "delete-task" && type === "summary") return false;
+        return true;
+    };
+
+    return (
+        <ContextMenu api={apiRef.current} filter={filterMenu}>
+            <Gantt
+                apiRef={apiRef}
+                tasks={data.tasks}
+                links={data.links}
+                scales={data.scales}
+            />
+        </ContextMenu>
+    );
+};
+
+export default MyComponent;
+
+
+TOOLTIPS
+Adding tooltips
+Adding a default tooltip
+To add a default tooltip that displays the task name, do the following:
+
+import the Tooltip component from Gantt
+wrap the Gantt tag into the Tooltip tag
+pass the api object to the Tooltip component
+Example:
+
+import { getData } from "../data";
+import { Gantt, Tooltip } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { useRef, useEffect } from "react";
+
+function MyComponent() {
+  const data = getData();
+  const apiRef = useRef();
+
+  useEffect(() => {
+    if (apiRef.current) {
+      // perform any operations with apiRef
+    }
+  }, [apiRef]);
+
+  return (
+    <Tooltip api={apiRef.current}>
+      <Gantt
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+        apiRef={apiRef}
+      />
+    </Tooltip>
+  );
+}
+
+export default MyComponent;
+
+Adding a custom tooltip
+To add a custom template to a tooltip:
+
+import the Tooltip component from Gantt
+prepare you custom React template
+import your custom template
+add the name of the template as the value of the Tooltip content attribute
+wrap the Gantt tag into the Tooltip tag
+pass the api object to the Tooltip component
+Example:
+
+import { getData } from "../data";
+import { Gantt, Tooltip } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import MyTooltipContent from "../custom/MyTooltipContent.jsx";
+import { useRef } from "react";
+
+const ExampleComponent = () => {
+  const data = getData();
+  const apiRef = useRef();
+
+  return (
+    <Tooltip api={apiRef.current} content={MyTooltipContent}>
+      <Gantt
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+        apiRef={apiRef}
+      />
+    </Tooltip>
+  );
+};
+
+export default ExampleComponent;
+
+Below is an example of the custom template for a tooltip:
+
+import { format } from "date-fns";
+
+const DataComponent = ({ data }) => {
+  const mask = "yyyy.MM.dd";
+
+  if (!data) return null;
+
+  return (
+    <div className="data">
+      <div className="text">
+        <span className="caption">{data.type}:</span>
+        {data.text}
+      </div>
+      <div className="text">
+        <span className="caption">start:</span>
+        {format(data.start, mask)}
+      </div>
+      {data.end && (
+        <div className="text">
+          <span className="caption">end:</span>
+          {format(data.end, mask)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DataComponent;
+
+.data {
+  white-space: nowrap;
+  background-color: var(--wx-tooltip-background);
+  padding: 3px 8px;
+}
+
+.text {
+  font-family: var(--wx-font-family);
+  color: var(--wx-color-primary-font);
+  font-size: 13px;
+  text-transform: capitalize;
+  margin-bottom: 5px;
+}
+
+.text:last-child {
+  margin-bottom: 0;
+}
+
+.caption {
+  font-weight: 700;
+}
+
+VERTICAL MARKERS
+Adding a marker
+To add a marker, add the markers object to the markers array:
+
+import React, { useRef } from "react";
+import { getData } from "./data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const App = () => {
+  const data = getData();
+  const markers = [
+    {
+      start: new Date(2020, 2, 4),
+      text: "Start Project",
+    },
+  ];
+
+  const apiRef = useRef();
+
+  return (
+    <Gantt
+      markers={markers}
+      tasks={data.tasks}
+      ref={apiRef}
+      // other settings
+    />
+  );
+};
+
+export default App;
+
+Customizing the markers style
+To change the default style, redefine global css variables for markers.
+
+Default values:
+
+:root {
+  --wx-gantt-marker-font: 500 12px Roboto;
+  --wx-gantt-marker-font-color: #fff;
+  --wx-gantt-marker-color: rgba(6, 189, 248, 0.77);
+}
+
+Example:
+
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const GanttComponent = () => {
+  const data = getData();
+  const markers = [
+    {
+      start: new Date(2020, 2, 8),
+      text: "Today",
+    },
+  ];
+
+  return (
+    <Gantt
+      markers={markers}
+      tasks={data.tasks}
+      // other settings
+    />
+  );
+};
+
+export default GanttComponent;
+
+:global(.wx-willow-theme) {
+  --wx-gantt-marker-font-color: yellow;
+}
+
+You can also apply the css parameter to customize the style for a specific marker:
+
+import React, { useRef } from "react";
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+const markers = [
+  {
+    start: new Date(2020, 2, 4),
+    text: "Start Project",
+    css: "myMiddleClass",
+    title: "Start point of project",
+  },
+  //other markers
+];
+
+function GanttComponent() {
+  const apiRef = useRef();
+
+  return (
+    <Gantt
+      markers={markers}
+      tasks={data.tasks}
+      apiRef={apiRef}
+      //other settings
+    />
+  );
+}
+
+export default GanttComponent;
+
+.wx-willow-theme .myMiddleClass {
+  background-color: rgba(255, 84, 84, 0.77);
+}
+
+CUSTOM DIALOG
+Adding a custom editor dialog
+To add your custom editor, you should:
+
+Import the custom Form component for adding/editing tasks
+Use the api.intercept method to disable opening the default editor by blocking the show-editor action (return false)
+Add the Form tag, define tasks and taskTypes, and add the action handler function that triggers the update-task or delete-task action.
+import { useEffect, useState, useRef } from "react";
+import { getData } from "../data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { Form } from "../custom/Form.jsx";
+
+const MyComponent = () => {
+  const data = getData();
+  const taskTypes = [
+    { id: "task", label: "Task" },
+    { id: "milestone", label: "Milestone" },
+    { id: "summary", label: "Project" },
+  ];
+
+  const [task, setTask] = useState(null);
+  const apiRef = useRef(null);
+  const [store, setStore] = useState(null);
+
+  useEffect(() => {
+    if (apiRef.current) {
+      const api = apiRef.current;
+      setStore(api.getState().tasks);
+
+      api.intercept("show-editor", (data) => {
+        setTask(store.byId(data.id));
+        return false;
+      });
+    }
+  }, [apiRef.current, store]);
+
+  const formAction = (ev) => {
+    const { action, data } = ev;
+
+    switch (action) {
+      case "close-form":
+        setTask(null);
+        break;
+
+      default:
+        apiRef.current.exec(action, data); // "update-task", "delete-task" actions
+        break;
+    }
+  };
+
+  return (
+    <>
+      <Gantt
+        apiRef={apiRef}
+        tasks={data.tasks}
+        links={data.links}
+        scales={data.scales}
+      />
+
+      {task && <Form task={task} taskTypes={taskTypes} onAction={formAction} />}
+    </>
+  );
+};
+
+export default MyComponent;
+
+FULL SCREEN
+Fullscreen mode
+Enabling the fullscreen mode
+To enable the fullscreen mode, import the Fullscreen component and wrap the Gantt tag into the Fullscreen tag.
+
+Example:
+
+import React from 'react';
+import { getData } from "../data";
+import { Gantt, Fullscreen } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function Demo() {
+  return (
+    <div className="demo">
+      <h4>Click the "expand" icon</h4>
+      <div className="gtcell">
+        <Fullscreen>
+          <Gantt tasks={data.tasks} links={data.links} />
+        </Fullscreen>
+      </div>
+    </div>
+  );
+}
+
+export default Demo;
+
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.gtcell {
+  overflow: hidden;
+  border: var(--wx-gantt-border);
+}
+
+Assigning hotkeys
+You can also assign hotkeys for enabling the fullscreen mode. You need to add the value to the hotkey property of the Fullscreen tag:
+
+Example:
+
+import { getData } from "../data";
+import { Gantt, Fullscreen } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function App() {
+    return (
+        <Fullscreen hotkey="ctrl+f">
+            <Gantt tasks={data.tasks} links={data.links} />
+        </Fullscreen>
+    );
+}
+
+export default App;
+
+STYLING
+Styling
+You can customize styles of the Gantt interface to meet your project requirements. The library provides a wide range of css variables with the next built-in themes:
+
+Willow
+WillowDark
+Theme settings
+Willow theme settings:
+
+.wx-willow-theme {
+    --wx-gantt-border: 1px solid #1d1e261a;
+    --wx-gantt-form-header-border: none;
+    --wx-gantt-icon-color: #9fa1ae;
+
+    /* bars */
+    --wx-gantt-bar-font: var(--wx-font-weight) var(--wx-font-size)
+        var(--wx-font-family);
+    --wx-gantt-bar-border-radius: 3px;
+    --wx-gantt-milestone-border-radius: 3px;
+
+    --wx-gantt-task-color: #3983eb;
+    --wx-gantt-task-font-color: #fff;
+    --wx-gantt-task-fill-color: #1f6bd9;
+    --wx-gantt-task-border-color: #1f6bd9;
+    --wx-gantt-task-border: 1px solid transparent;
+
+    --wx-gantt-project-color: #00ba94;
+    --wx-gantt-project-font-color: #ffffff;
+    --wx-gantt-project-fill-color: #099f81;
+    --wx-gantt-project-border-color: #099f81;
+    --wx-gantt-project-border: 1px solid transparent;
+
+    --wx-gantt-milestone-color: #ad44ab;
+
+    --wx-gantt-select-color: #eaedf5;
+    --wx-gantt-link-color: #9fa1ae;
+    --wx-gantt-link-marker-background: #eaedf5;
+    --wx-gantt-link-marker-color: #9fa1ae;
+
+    --wx-gantt-bar-shadow: 0px 1px 2px rgba(44, 47, 60, 0.06),
+        0px 3px 10px rgba(44, 47, 60, 0.12);
+
+    --wx-gantt-progress-marker-height: 26px;
+    --wx-gantt-progress-border-color: #c0c3ce;
+
+    --wx-gantt-baseline-border-radius: 2px;
+
+    /* grid */
+    --wx-grid-header-font: var(--wx-font-weight-md) var(--wx-font-size)
+        var(--wx-font-family);
+    --wx-grid-header-font-color: var(--wx-color-font);
+    --wx-grid-header-text-transform: capitalize;
+    --wx-grid-header-shadow: none;
+
+    --wx-grid-body-font: var(--wx-font-weight) var(--wx-font-size)
+        var(--wx-font-family);
+    --wx-grid-body-font-color: var(--wx-color-font);
+    --wx-grid-body-row-border: var(--wx-gantt-border);
+    --wx-grid-body-cell-border: 1px solid transparent;
+
+    /* timescale */
+    --wx-timescale-font: var(--wx-font-weight-md) var(--wx-font-size-sm)
+        var(--wx-font-family);
+    --wx-timescale-font-color: var(--wx-color-font);
+    --wx-timescale-text-transform: uppercase;
+    --wx-timescale-shadow: none;
+    --wx-timescale-border: var(--wx-gantt-border);
+
+    /* grid and timescale */
+    --wx-gantt-holiday-background: #f0f6fa;
+    --wx-gantt-holiday-color: #9fa1ae;
+
+    /* markers */
+    --wx-gantt-marker-font: var(--wx-font-weight-md) var(--wx-font-size-sm)
+        var(--wx-font-family);
+    --wx-gantt-marker-font-color: #fff;
+    --wx-gantt-marker-color: rgba(6, 189, 248, 0.77);
+
+    /* tooltips */
+    --wx-tooltip-font: var(--wx-font-weight) var(--wx-font-size)
+        var(--wx-font-family);
+    --wx-tooltip-font-color: #e6e6e6;
+    --wx-tooltip-background: #4f525a;
+
+    /* sidebar */
+    --wx-sidebar-close-icon: #c0c3ce;
+}
+
+WillowDark theme settings:
+
+.wx-willow-dark-theme {
+    color-scheme: dark;
+
+    --wx-gantt-border: var(--wx-border);
+    --wx-gantt-form-header-border: none;
+    --wx-gantt-icon-color: #9fa1ae;
+
+    /* bars */
+    --wx-gantt-bar-font: var(--wx-font-weight) var(--wx-font-size) var(--wx-font-family);
+    --wx-gantt-bar-border-radius: 3px;
+    --wx-gantt-milestone-border-radius: 3px;
+
+    --wx-gantt-task-color: #37a9ef;
+    --wx-gantt-task-font-color: #ffffffe5;
+    --wx-gantt-task-fill-color: #098cdc;
+    --wx-gantt-task-border-color: #098cdc;
+    --wx-gantt-task-border: 1px solid transparent;
+
+    --wx-gantt-project-color: #00ba94;
+    --wx-gantt-project-font-color: #ffffffe5;
+    --wx-gantt-project-fill-color: #099f81;
+    --wx-gantt-project-border-color: #099f81;
+    --wx-gantt-project-border: 1px solid transparent;
+
+    --wx-gantt-progress-marker-height: 26px;
+    --wx-gantt-progress-border-color: #4b5359;
+
+    --wx-gantt-baseline-border-radius: 2px;
+
+    /* temp*/
+    --wx-gantt-bar-shadow: 0px 1px 2px rgba(44, 47, 60, 0.06), 0px 3px 10px rgba(44, 47, 60, 0.12);
+
+    --wx-gantt-milestone-color: #ad44ab;
+
+    --wx-gantt-select-color: #384047;
+    --wx-gantt-link-color: #9fa1ae;
+    --wx-gantt-link-marker-background: #384047;
+    --wx-gantt-link-marker-color: #9fa1ae;
+
+    /* grid */
+    --wx-grid-header-font: var(--wx-font-weight-md) var(--wx-font-size) var(--wx-font-family);
+    --wx-grid-header-font-color: var(--wx-color-font);
+    --wx-grid-header-text-transform: capitalize;
+    --wx-grid-header-shadow: none;
+
+    --wx-grid-body-font: var(--wx-font-weight) var(--wx-font-size) var(--wx-font-family);
+    --wx-grid-body-font-color: var(--wx-color-font);
+    --wx-grid-body-row-border: var(--wx-border);
+    --wx-grid-body-cell-border: 1px solid transparent;
+
+    /* timescale */
+    --wx-timescale-font: var(--wx-font-weight-md) var(--wx-font-size-sm) var(--wx-font-family);
+    --wx-timescale-font-color: var(--wx-color-font);
+    --wx-timescale-text-transform: uppercase;
+    --wx-timescale-shadow: none;
+    --wx-timescale-border: var(--wx-border);
+
+    /* grid and timescale */
+    --wx-gantt-holiday-background: #303539;
+    --wx-gantt-holiday-color: #878994;
+
+    /* markers */
+    --wx-gantt-marker-font: var(--wx-font-weight-md) var(--wx-font-size-sm) var(--wx-font-family);
+    --wx-gantt-marker-font-color: #fff;
+    --wx-gantt-marker-color: rgba(6, 189, 248, 0.77);
+
+    /* tooltips */
+    --wx-tooltip-font: var(--wx-font-weight) var(--wx-font-size) var(--wx-font-family);
+    --wx-tooltip-font-color: #e6e6e6;
+    --wx-tooltip-background: #4f525a;
+
+    /* sidebar */
+    --wx-sidebar-close-icon: #384047;
+}
+
+Applying a theme
+Apply the desired theme by importing the theme and wrapping Gantt into the required theme tag:
+
+import { getData } from "./common/data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+import { Willow } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function GanttComponent() {
+  return (
+    <Willow>
+      <Gantt tasks={data.tasks} 
+      //other settings 
+      />
+    </Willow>
+  );
+}
+
+export default GanttComponent;
+
+If you need to apply different themes to multiple charts, wrap each Gantt tag into the required theme tag.
+
+import { getData, simpleColumns } from "./common/data";
+import { Gantt, Willow, WillowDark } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function App() {
+  return (
+    <>
+      <Willow>
+        <Gantt
+          tasks={data.tasks}
+          links={data.links}
+          scales={data.scales}
+          columns={simpleColumns}
+          start={new Date(2021, 2, 1)}
+          end={new Date(2021, 3, 1)}
+        />
+      </Willow>
+
+      <WillowDark>
+        <Gantt
+          tasks={data.newtasks}
+          links={data.newlinks}
+          scales={data.newscales}
+          columns={data.columns}
+          start={new Date(2023, 2, 1)}
+          end={new Date(2023, 3, 1)}
+        />
+      </WillowDark>
+    </>
+  );
+}
+
+export default App;
+
+Customizing theme settings
+To change the themes settings, create a CSS class by changing values of the required CSS variables and apply it to Gantt.
+
+import { getData } from "../data";
+import { Gantt } from "wx-react-gantt";
+import "wx-react-gantt/dist/gantt.css";
+
+const data = getData();
+
+function Demo() {
+  return (
+    <div className="demo" style={{ padding: "20px" }}>
+      <div>
+        <Gantt 
+          tasks={data.tasks}
+          links={data.links}
+          scales={data.scales} />
+      </div>
+    </div>
+  );
+}
+
+export default Demo;
+
+.demo {
+  --wx-gantt-border: 1px solid #a8ae69;
+  --wx-gantt-form-header-border: solid;
+  --wx-gantt-icon-color: #9d95bc;
+  --wx-gantt-task-color: #9d95bc;
+}
